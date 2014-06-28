@@ -58,7 +58,7 @@
 ; "Clojure Cookbook" by Luke VanderHart and Ryan Neufeld (O’Reilly).
 ; Copyright 2014 Cognitect, Inc., 978-1-449-36617-9.”"Clojure Cookbook"
 
-(defn within-distance
+(defn within-distance?
     "Predicate for finding out if the given point is within a distance of another.
      The distance is given as a double value in kilometers."
     ([dist p1 p2] (<= (distance-between p1 p2) dist)))

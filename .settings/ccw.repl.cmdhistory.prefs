@@ -1,0 +1,2 @@
+cmdhistory=["(require '[clojure.tools.cli \:refer [cli]])"]
+eclipse.preferences.version=1
