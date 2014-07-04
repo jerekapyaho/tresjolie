@@ -16,8 +16,8 @@
   [file-name]
   (with-open [f (io/reader file-name)]    (doall      (->> (csv/read-csv f)        (map #(apply ->Stop %))))))
 
-; Converts the fields of a Stop record from strings into data
-(defn converted-stop-record
+; Coerces the fields of a Stop record from strings into data
+(defn coerced-stop-record
   [x]
   (->Stop (Integer/parseInt (:id x)) 
           (:code x) 
@@ -25,9 +25,14 @@
           (Double/parseDouble (:lat x)) 
           (Double/parseDouble (:lon x))))
 
-(defn converted-stop-records
+(defn coerced-stop-records
   [xs]
-  (for [x xs] (converted-stop-record x)))
+  (for [x xs] (coerced-stop-record x)))
+
+; All stops, read from CSV and coerced
+(defn all-stops
+  [options]
+  (coerced-stop-records (stop-records (:filename options))))
 
 ; Approximate geographical location of Tampere Central Square (Keskustori)
 (def tampere-central-square [61.508056 23.768056])
@@ -73,13 +78,9 @@
   (println msg)
   (System/exit status))
 
-
-; TODO: Refactor `all-stops` into a function
-
 (defn generated-source 
   [options] 
-  (let [all-stops (stop-records (:filename options))]
-    (json/write-str (converted-stop-records all-stops))))
+  (json/write-str (all-stops options)))
 ; This function was originally named 'source', but there already is clojure.repl/source.
 ; Took me a while to realize what "Source not found" from REPL actually meant...
 
@@ -87,11 +88,10 @@
 ; by filtering from the stop list all stops that match `geo/within-distance?`
 (defn nearby-stops 
   [options] 
-  (let [all-stops (converted-stop-records (stop-records (:filename options)))
-        lat (:latitude options) 
+  (let [lat (:latitude options) 
         lon (:longitude options) 
         dist (:distance options)]
-    (filter (fn [x] (geo/within-distance? dist [lat lon] [(:lat x) (:lon x)])) all-stops)))
+    (filter (fn [x] (geo/within-distance? dist [lat lon] [(:lat x) (:lon x)])) (all-stops options))))
 
 (defn -main
   [& args]
