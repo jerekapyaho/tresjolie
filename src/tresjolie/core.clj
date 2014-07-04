@@ -29,48 +29,6 @@
   [xs]
   (for [x xs] (converted-stop-record x)))
 
-; Field names for JSON code generation
-(def json-fields [:stopID :stopCode :stopName :stopLatitude :stopLongitude])
-
-(defn json-map
-  [x]
-  (zipmap json-fields x))
-
-(defn json-stops
-  [xs]
-  (for [x xs] (json-map x)))
-  
-; Field names for a stop, to be used as keys in a map representing a stop
-(def stop-fields [:stop-id :stop-code :stop-name :stop-latitude :stop-longitude])
-
-
-(defn stop-map 
-  "Maps field names into vector elements representing stops"
-  [x] 
-  (zipmap stop-fields x))
-
-(defn stop-coords
-  "Returns the coordinates of a stop as a latitude longitude pair in a vector, converted to doubles"
-  [x]
-  (let [lat (Double/parseDouble (:stop-latitude x)) lon (Double/parseDouble (:stop-longitude x))]
-    [lat lon]))
-
-(defn stops 
-  "Reads a CSV file with stops, and returns a lazy sequence of vectors"
-  [file-name] 
-  (with-open [in-file (clojure.java.io/reader file-name)] 
-    (doall 
-      (clojure.data.csv/read-csv in-file))))
-
-(defn stops-in-range
-  "For each stop, find out its distance to the current location, and whether or not it is within a given distance"
-  [stops loc dist]
-  (for [x stops]
-    (if (geo/within-distance? dist loc [(:lat x) (:lon x)])
-      (:code x))))
-; Not happy with this - you'll get the stop code for those stops that are within the given distance,
-; and nil for others, so you will have to filter those later anyway. What about using clojure.core/filter here?
-
 ; Approximate geographical location of Tampere Central Square (Keskustori)
 (def tampere-central-square [61.508056 23.768056])
 
@@ -85,12 +43,12 @@
                   ["-h" "--help"]
                   ])
 
+; Options and arguments for testing, can be used in the REPL
 (def test-options {:filename "/Users/Jere/tmp/stops.csv" 
                    :latitude (first tampere-central-square) 
                    :longitude (last tampere-central-square)
                    :distance 1.5
                    :source "json"})
-
 (def test-arguments ["generate" "locate"])
 
 (defn usage [options-summary]
@@ -116,9 +74,8 @@
   (System/exit status))
 
 
-; TODO: Convert stopLatitude and stopLatitude in JSON to doubles instead of strings.
-; TODO: The generated-source function is not working correctly for JSON output yet,
-; and not at all for other source types.
+; TODO: Refactor `all-stops` into a function
+
 (defn generated-source 
   [options] 
   (let [all-stops (stop-records (:filename options))]
@@ -126,6 +83,8 @@
 ; This function was originally named 'source', but there already is clojure.repl/source.
 ; Took me a while to realize what "Source not found" from REPL actually meant...
 
+; Generates a sequence of stops within the specified distance and location
+; by filtering from the stop list all stops that match `geo/within-distance?`
 (defn nearby-stops 
   [options] 
   (let [all-stops (converted-stop-records (stop-records (:filename options)))
