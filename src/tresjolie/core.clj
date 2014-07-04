@@ -1,19 +1,33 @@
 (ns tresjolie.core
-  (:require [clojure.data.csv]
-            [clojure.java.io]
+  (:require [clojure.data.csv :as csv]
+            [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
             [clojure.data.json :as json]
-            [tresjolie.geodesy])
+            [tresjolie.geodesy :as geo])
   (:gen-class))
 
-; Field names for a stop, to be used as keys in a map representing a stop
-(def stop-fields [:stop-id :stop-code :stop-name :stop-latitude :stop-longitude])
+; Defines a Stop record with the customary fields
+(defrecord Stop 
+  [id code name lat lon])
 
-(defn stop-map 
-  "Maps field names into vector elements representing stops"
-  [x] 
-  (zipmap stop-fields x))
+; Reads the stops from a CSV file into Stop records
+(defn stop-records
+  [file-name]
+  (with-open [f (io/reader file-name)]    (doall      (->> (csv/read-csv f)        (map #(apply ->Stop %))))))
+
+; Converts the fields of a Stop record from strings into data
+(defn converted-stop-record
+  [x]
+  (->Stop (Integer/parseInt (:id x)) 
+          (:code x) 
+          (:name x) 
+          (Double/parseDouble (:lat x)) 
+          (Double/parseDouble (:lon x))))
+
+(defn converted-stop-records
+  [xs]
+  (for [x xs] (converted-stop-record x)))
 
 ; Field names for JSON code generation
 (def json-fields [:stopID :stopCode :stopName :stopLatitude :stopLongitude])
@@ -22,6 +36,19 @@
   [x]
   (zipmap json-fields x))
 
+(defn json-stops
+  [xs]
+  (for [x xs] (json-map x)))
+  
+; Field names for a stop, to be used as keys in a map representing a stop
+(def stop-fields [:stop-id :stop-code :stop-name :stop-latitude :stop-longitude])
+
+
+(defn stop-map 
+  "Maps field names into vector elements representing stops"
+  [x] 
+  (zipmap stop-fields x))
+
 (defn stop-coords
   "Returns the coordinates of a stop as a latitude longitude pair in a vector, converted to doubles"
   [x]
@@ -29,7 +56,7 @@
     [lat lon]))
 
 (defn stops 
-  "Reads a CSV file with stops using clojure.data.csv, and returns a lazy sequence of vectors"
+  "Reads a CSV file with stops, and returns a lazy sequence of vectors"
   [file-name] 
   (with-open [in-file (clojure.java.io/reader file-name)] 
     (doall 
@@ -39,9 +66,8 @@
   "For each stop, find out its distance to the current location, and whether or not it is within a given distance"
   [stops loc dist]
   (for [x stops]
-    (let [s (stop-map x)]
-      (if (tresjolie.geodesy/within-distance? dist loc (stop-coords s))
-        (:stop-code s)))))
+    (if (geo/within-distance? dist loc [(:lat x) (:lon x)])
+      (:code x))))
 ; Not happy with this - you'll get the stop code for those stops that are within the given distance,
 ; and nil for others, so you will have to filter those later anyway. What about using clojure.core/filter here?
 
@@ -55,9 +81,17 @@
                   ["-a" "--latitude LATITUDE" "Latitude of current location in decimal degrees" :parse-fn #(Double. %) :default (first tampere-central-square)] 
                   ["-o" "--longitude LONGITUDE" "Longitude of current location in decimal degrees" :parse-fn #(Double. %) :default (last tampere-central-square)]
                   ["-d" "--distance DISTANCE" "Distance from current location in kilometers" :parse-fn #(Double. %) :default 0.5]
-                  ["-s" "--source SOURCE" "Generate source code in SOURCE, where SOURCE = json | csharp | java | objc"] 
+                  ["-s" "--source SOURCE" "Generate source code in SOURCE, where SOURCE = json | csharp | java | objc" :default "json"] 
                   ["-h" "--help"]
                   ])
+
+(def test-options {:filename "/Users/Jere/tmp/stops.csv" 
+                   :latitude (first tampere-central-square) 
+                   :longitude (last tampere-central-square)
+                   :distance 1.5
+                   :source "json"})
+
+(def test-arguments ["generate" "locate"])
 
 (defn usage [options-summary]
   (->> ["Process a GTFS stops.txt file and generate source code, or report stops within a given distance from the specified location."
@@ -87,20 +121,23 @@
 ; and not at all for other source types.
 (defn generated-source 
   [options] 
-  (let [all-stops (stops (:filename options))]
-    (json/write-str (map json/write-str (map json-map (apply list all-stops))))))
+  (let [all-stops (stop-records (:filename options))]
+    (json/write-str (converted-stop-records all-stops))))
 ; This function was originally named 'source', but there already is clojure.repl/source.
 ; Took me a while to realize what "Source not found" from REPL actually meant...
 
 (defn nearby-stops 
   [options] 
-  (let [lat (:latitude options) lon (:longitude options) dist (:distance options)] 
-    (println (stops-in-range (stops (:filename options)) [lat lon] dist))))
+  (let [all-stops (converted-stop-records (stop-records (:filename options)))
+        lat (:latitude options) 
+        lon (:longitude options) 
+        dist (:distance options)]
+    (filter (fn [x] (geo/within-distance? dist [lat lon] [(:lat x) (:lon x)])) all-stops)))
 
 (defn -main
   [& args]
   (let [{:keys [options arguments errors summary]} (parse-opts args app-options)]
-    (println (str "options = " options ", arguments = " arguments))
+    ;(println (str "options = " options ", arguments = " arguments))
         
     ; Handle special cases that cause us to exit
     (cond
@@ -110,6 +147,13 @@
     
     ;; Execute program with options
     (case (first arguments)
+      ; Output source code
       "generate" (println (generated-source options))
-      "locate" (nearby-stops options)
+      
+      ; Construct a JSend-compatible response of the nearby stops
+      "locate" (let [response {:status "success" 
+                               :message "" 
+                               :data (nearby-stops options)}]
+                 (println (json/write-str response)))
+      
       (exit 1 (usage summary)))))
