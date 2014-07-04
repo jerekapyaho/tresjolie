@@ -44,7 +44,7 @@
                   ["-a" "--latitude LATITUDE" "Latitude of current location in decimal degrees" :parse-fn #(Double. %) :default (first tampere-central-square)] 
                   ["-o" "--longitude LONGITUDE" "Longitude of current location in decimal degrees" :parse-fn #(Double. %) :default (last tampere-central-square)]
                   ["-d" "--distance DISTANCE" "Distance from current location in kilometers" :parse-fn #(Double. %) :default 0.5]
-                  ["-s" "--source SOURCE" "Generate source code in SOURCE, where SOURCE = json | csharp | java | objc" :default "json"] 
+                  ["-s" "--source SOURCE" "Generate source code in SOURCE, where SOURCE = json | csharp | java | objc | sql" :default "json"] 
                   ["-h" "--help"]
                   ])
 
@@ -78,9 +78,26 @@
   (println msg)
   (System/exit status))
 
+; Source generation templates. These probably won't make much sense to you as such,
+; but you are free to replace them with your own. Note that the double values are emitted
+; as strings.
+(def java-source-template "stops.add(new Stop(%d, \"%s\", \"%s\", %s, %s));")
+(def objc-source-template "[[BMStop alloc] initWithDictionary:@{ @\"stopID\": @(%d), @\"stopCode\": @\"%s\", @\"stopName\": @\"%s\", @\"stopLatitude\": @(%s), @\"stopLongitude\": @(%s) }],")
+(def csharp-source-template "this.Items.Add(new ItemViewModel() { StopID = %d, StopCode = \"%s\", StopName = \"%s\", StopLatitude = %s, StopLongitude = %s });")
+(def sql-source-template "INSERT INTO stops_tre (stop_id, stop_code, stop_name, stop_lat, stop_lon) VALUES (%s, '%s', '%s', %s, %s);")
+
 (defn generated-source 
   [options] 
-  (json/write-str (all-stops options)))
+  (case (:source options)
+    "json" (json/write-str (all-stops options))
+    "objc" (doseq [x (all-stops options)]
+             (println (format objc-source-template (:id x) (:code x) (:name x) (:lat x) (:lon x))))
+    "csharp" (doseq [x (all-stops options)]
+               (println (format csharp-source-template (:id x) (:code x) (:name x) (:lat x) (:lon x))))
+    "sql" (doseq [x (all-stops options)]
+            (println (format sql-source-template (:id x) (:code x) (:name x) (:lat x) (:lon x))))
+    "java" (doseq [x (all-stops options)] 
+             (println (format java-source-template (:id x) (:code x) (:name x) (:lat x) (:lon x))))))
 ; This function was originally named 'source', but there already is clojure.repl/source.
 ; Took me a while to realize what "Source not found" from REPL actually meant...
 
