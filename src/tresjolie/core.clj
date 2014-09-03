@@ -44,7 +44,7 @@
                   ["-a" "--latitude LATITUDE" "Latitude of current location in decimal degrees" :parse-fn #(Double. %) :default (first tampere-central-square)] 
                   ["-o" "--longitude LONGITUDE" "Longitude of current location in decimal degrees" :parse-fn #(Double. %) :default (last tampere-central-square)]
                   ["-d" "--distance DISTANCE" "Distance from current location in kilometers" :parse-fn #(Double. %) :default 0.5]
-                  ["-s" "--source SOURCE" "Generate source code in SOURCE, where SOURCE = json | csharp | java | objc | sql" :default "json"] 
+                  ["-s" "--source SOURCE" "Generate source code in SOURCE, where SOURCE = json | csharp | java | objc | sql | csv" :default "json"] 
                   ["-h" "--help"]
                   ])
 
@@ -85,6 +85,7 @@
 (def objc-source-template "[[BMStop alloc] initWithDictionary:@{ @\"stopID\": @(%d), @\"stopCode\": @\"%s\", @\"stopName\": @\"%s\", @\"stopLatitude\": @(%s), @\"stopLongitude\": @(%s) }],")
 (def csharp-source-template "this.Items.Add(new ItemViewModel() { StopID = %d, StopCode = \"%s\", StopName = \"%s\", StopLatitude = %s, StopLongitude = %s });")
 (def sql-source-template "INSERT INTO stops_tre (stop_id, stop_code, stop_name, stop_lat, stop_lon) VALUES (%s, '%s', '%s', %s, %s);")
+(def csv-source-template "%d,%s,%s,%s,%s")
 
 (defn generated-source 
   [options] 
@@ -96,6 +97,8 @@
                (println (format csharp-source-template (:id x) (:code x) (:name x) (:lat x) (:lon x))))
     "sql" (doseq [x (all-stops options)]
             (println (format sql-source-template (:id x) (:code x) (:name x) (:lat x) (:lon x))))
+    "csv" ((doseq [x (all-stops options)]
+            (println (format csv-source-template (:id x) (:code x) (:name x) (:lat x) (:lon x))))
     "java" (doseq [x (all-stops options)] 
              (println (format java-source-template (:id x) (:code x) (:name x) (:lat x) (:lon x))))))
 ; This function was originally named 'source', but there already is clojure.repl/source.
