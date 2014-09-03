@@ -1,11 +1,15 @@
-/clojure/target
-/clojure/classes
+clojure/target
+clojure/classes
 /checkouts
 pom.xml
 pom.xml.asc
 *.jar
 *.class
-/clojure/.lein-*
-/clojure/.nrepl-port
-/clojure/bin
-/clojure/.settings/ccw.*
+clojure/.lein-*
+clojure/.nrepl-port
+clojure/bin
+clojure/.settings/ccw.*
+
+# Python files
+python/__pycache__/
+python/*.py[cod]

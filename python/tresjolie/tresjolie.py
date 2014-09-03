@@ -30,11 +30,13 @@ def main(argv):
     elif src_language == 'json':
         pass # Will handle JSON as a special case
     else:
-        print('Can''t handle:', src_language)
+        print('Can\'t handle:', src_language)
         sys.exit(-1)
-                    
+
     #print('Source code to generate: ', src_language)
     
+    data_path = argv[1]
+                        
     # Set this to True if there is something wrong with the results
     check_output = False
     
@@ -45,7 +47,7 @@ def main(argv):
     # NOTE: We will treat all values as strings since we're generating source code.
     # If we need to do calculations, the latitude and longitude values are 
     # explicitly converted to floats as needed.   
-    with codecs.open('stops.csv', encoding='utf-8') as infile:
+    with codecs.open(data_path + 'stops.csv', encoding='utf-8') as infile:
         reader = csv.reader(infile)
         for columns in reader:
             stop_id = int(columns[0])
@@ -57,7 +59,7 @@ def main(argv):
     #print('number of stops = %d' % (len(all_stops)))
     #print('all_stops = ', all_stops)
         
-    infile = codecs.open('stop_lines.csv', 'rb', encoding='utf-8')
+    infile = codecs.open(data_path + 'stop_lines.csv', 'rb', encoding='utf-8')
     try:
         reader = csv.reader(infile)
         for row in reader:
@@ -73,7 +75,7 @@ def main(argv):
     finally:
         infile.close()
 
-    infile = codecs.open('stop_directions.csv', 'rb', encoding='utf-8')
+    infile = codecs.open(data_path + 'stop_directions.csv', 'rb', encoding='utf-8')
     try:
         reader = csv.reader(infile)
         for row in reader:
@@ -89,7 +91,7 @@ def main(argv):
     finally:
         infile.close()
         
-    infile = codecs.open('stop_munis.csv', 'rb', encoding='utf-8')
+    infile = codecs.open(data_path + 'stop_munis.csv', 'rb', encoding='utf-8')
     try:
         reader = csv.reader(infile)
         for row in reader:

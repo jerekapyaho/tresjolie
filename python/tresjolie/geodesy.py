@@ -12,8 +12,7 @@ def geocentric_radius(latitude_degrees):
     Computes the geocentric radius of the Earth for the given latitude.
     
     See http://en.wikipedia.org/wiki/Earth_radius#Geocentric_radius.
-    """
-    
+    """    
     latitude = math.radians(latitude_degrees)
     a = EARTH_EQUATORIAL_RADIUS
     b = EARTH_POLAR_RADIUS
@@ -29,9 +28,7 @@ def geocentric_radius(latitude_degrees):
     r = math.sqrt(t1 / t2)
     return r
 
-# 
-# 
-#   
+
 def haversine(lat1_deg, lon1_deg, lat2_deg, lon2_deg, earth_radius=EARTH_EQUATORIAL_RADIUS):
     """
     Computes the distance between two geographical points in kilometers.
@@ -43,8 +40,7 @@ def haversine(lat1_deg, lon1_deg, lat2_deg, lon2_deg, earth_radius=EARTH_EQUATOR
     The Earth radius defaults to the Earth's equatorial radius.
     For added accuracy, you may want pass a radius more suitable for the
     latitudes of the points you are processing.
-    """
-    
+    """    
     lat1 = math.radians(lat1_deg)
     lon1 = math.radians(lon1_deg)
     lat2 = math.radians(lat2_deg)
@@ -57,5 +53,3 @@ def haversine(lat1_deg, lon1_deg, lat2_deg, lon2_deg, earth_radius=EARTH_EQUATOR
     d = earth_radius * c
 
     return d
-
-
