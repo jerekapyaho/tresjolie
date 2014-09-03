@@ -1,11 +1,11 @@
-/target
-/classes
+/clojure/target
+/clojure/classes
 /checkouts
 pom.xml
 pom.xml.asc
 *.jar
 *.class
-/.lein-*
-/.nrepl-port
-/bin
-.settings/ccw.*
+/clojure/.lein-*
+/clojure/.nrepl-port
+/clojure/bin
+/clojure/.settings/ccw.*
