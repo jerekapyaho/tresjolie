@@ -20,7 +20,7 @@ def main(argv):
     if src_language == 'java':
         src_template = 'stops.add(new Stop(%d, "%s", "%s", %s, %s, "%s", "%s", "%s"));'
     elif src_language == 'csharp':
-        src_template = 'this.Items.Add(new ItemViewModel() { StopID = %d, StopCode = "%s", StopName = "%s", StopLatitude = %s, StopLongitude = %s, StopDirection = "%s", StopLines = "%s", StopMuni = "%s" });'
+        src_template = 'stopsDb.Stops.InsertOnSubmit(new Stop() { ID = %d, Code = "%s", Name = "%s", Latitude = %s, Longitude = %s, Direction = "%s", Lines = "%s", Municipality = "%s" });'
     elif src_language == 'objc':
         src_template = '[[BMStop alloc] initWithDictionary:@{ @"stopID": @(%d), @"stopCode": @"%s", @"stopName": @"%s", @"stopLatitude": @(%s), @"stopLongitude": @(%s), @"stopDirection": @"%s", @"stopLines": @"%s", @"stopMuni": @"%s" }],'
     elif src_language == 'csv':
