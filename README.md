@@ -1,8 +1,3 @@
-tresjolie for Clojure and Python
-
-The Clojure README contains information about this project. It will be
-migrated here soon.
-
 # tresjolie
 
 Utilities for processing open data related to Tampere public transport
@@ -21,10 +16,17 @@ The Tampere Public Transport data is released under
 [its own license](http://www.tampere.fi/tampereinfo/avoindata/avoindatalisenssi.html)
 (in Finnish only), so it is not duplicated here.
 
+These are developed more or less in parallel using Python, Clojure
+and Haskell. Time will tell which of these will become the main
+tool, but at the time of this writing (September 2014), Python is
+getting most love.
+
 ## Installation and usage
 
-There are two independent subprojects, one for Python and one for 
-[Clojure](http://clojure.org).
+There are three independent subprojects, 
+one for [Python](http://www.python.org),
+one for [Clojure](http://clojure.org),
+and one for [Haskell](http://www.haskell.org).
 
 ### Python notes
 
@@ -34,6 +36,11 @@ just execute the script in _python/tresjolie_.
 ### Clojure notes
 
 Use [Leiningen](http://leiningen.org) to build and run.
+
+### Haskell notes
+
+There is not much to do yet except use GHCi to play with the
+functions in the Geodesy module.
 
 ### Usage
 
