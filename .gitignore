@@ -13,3 +13,8 @@ clojure/.settings/ccw.*
 # Python files
 python/tresjolie/__pycache__/
 python/*.py[cod]
+
+# Haskell files
+haskell/*.hi
+haskell/*.o
+
