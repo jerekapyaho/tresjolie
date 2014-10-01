@@ -1,8 +1,8 @@
 -- Geodesy functions modelled after http://www.movable-type.co.uk/scripts/latlong.html
 module Geodesy
 ( GeoPt(..)
---, distanceBetween
---, withinDistance
+, distanceBetween
+, withinDistance
 , geocentricRadius
 ) where
 
@@ -14,11 +14,8 @@ data GeoPt = GeoPt { latitude :: Double
                    , longitude :: Double
                    } deriving (Eq, Show)
 
--- Create a GeoPt instance to represent the Tampere Central Square (Keskustori)
-tampereCentralSquare = GeoPt { latitude = 61.508056, longitude = 23.768056 }
-
 -- Earth's approximate radius at latitude 61.50
-earthRadius = 6371.009
+earthRadius = 6357.959706678803
 
 earthEquatorialRadius = 6378.1370
 earthPolarRadius = 6356.7523
@@ -38,7 +35,6 @@ geocentricRadius lat = let t1a = square ((square earthEquatorialRadius) * (cos l
                        in sqrt ((t1a + t1b) / (t2a + t2b))
 
 -- Returns the distance in kilometers between two geographical points
---{--
 distanceBetween :: GeoPt -> GeoPt -> Double -> Double
 distanceBetween p1 p2 radius = let lat1 = deg2rad (latitude p1)
                                    lon1 = deg2rad (longitude p1)
@@ -54,3 +50,4 @@ distanceBetween p1 p2 radius = let lat1 = deg2rad (latitude p1)
 -- of another point. The distance is given as a double value in kilometers.
 withinDistance :: Double -> GeoPt -> GeoPt -> Double -> Bool
 withinDistance dist p1 p2 radius = distanceBetween p1 p2 radius <= dist
+
