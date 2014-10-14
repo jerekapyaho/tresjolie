@@ -25,14 +25,16 @@ square :: Double -> Double
 square x = x * x
 
 deg2rad :: Double -> Double
-deg2rad x = 2 * pi * x / 360
+deg2rad x = 2.0 * pi * x / 360.0
 
 geocentricRadius :: Double -> Double
 geocentricRadius lat = let t1a = square ((square earthEquatorialRadius) * (cos lat))
                            t1b = square ((square earthPolarRadius) * (sin lat))
                            t2a = square (earthEquatorialRadius * (cos lat))
                            t2b = square (earthPolarRadius * (sin lat))
-                       in sqrt ((t1a + t1b) / (t2a + t2b))
+                           t1 = t1a + t1b
+                           t2 = t2a + t2b
+                       in sqrt (t1 / t2)
 
 -- Returns the distance in kilometers between two geographical points
 distanceBetween :: GeoPt -> GeoPt -> Double -> Double
@@ -42,7 +44,7 @@ distanceBetween p1 p2 radius = let lat1 = deg2rad (latitude p1)
                                    lon2 = deg2rad (longitude p2)
                                    dt = lat2 - lat1
                                    dl = lon2 - lon1
-                                   a = square (sin (dt / 2)) + cos (lat1) * cos (lat2) * square (sin (dl / 2))
+                                   a = square (sin (dt / 2)) + cos lat1 * cos lat2 * square (sin (dl / 2))
                                    c = 2.0 * (atan2 (sqrt a) (sqrt (1 - a)))
                                in radius * c
 

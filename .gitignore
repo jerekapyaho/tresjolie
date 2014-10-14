@@ -14,7 +14,4 @@ clojure/.settings/ccw.*
 python/tresjolie/__pycache__/
 python/*.py[cod]
 
-# Haskell files
-haskell/*.hi
-haskell/*.o
-
+# Haskell files are listed in haskell/.gitignore
