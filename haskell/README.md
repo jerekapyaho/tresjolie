@@ -19,3 +19,5 @@ Use `ghci` to play around with what's there, like this:
     *Geodesy> withinDistance 500 paris berlin 6376.68
     False
 
+You can also build the project with `runghc` to see the results of the 
+smoke test.

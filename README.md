@@ -39,8 +39,10 @@ Use [Leiningen](http://leiningen.org) to build and run.
 
 ### Haskell notes
 
-There is not much to do yet except use GHCi to play with the
-functions in the Geodesy module.
+The Haskell version contains a simple smoke test to exercise
+[Journeys API](http://wiki.itsfactory.fi/index.php/Journeys_API). 
+Use [`runghc`](https://www.haskell.org/ghc/docs/7.0.3/html/users_guide/runghc.html) 
+as usual to build and run.
 
 ### Usage
 
