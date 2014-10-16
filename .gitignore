@@ -1,14 +1,4 @@
-clojure/target
-clojure/classes
-/checkouts
-pom.xml
-pom.xml.asc
-*.jar
-*.class
-clojure/.lein-*
-clojure/.nrepl-port
-clojure/bin
-clojure/.settings/ccw.*
+.DS_Store
 
 # Python files
 python/tresjolie/__pycache__/
