@@ -1,6 +1,6 @@
-(ns tresjolie.core-test
+(ns com.coniferproductions.tresjolie.core-test
   (:require [clojure.test :refer :all]
-            [tresjolie.core :refer :all]))
+            [com.coniferproductions.tresjolie.core :refer :all]))
 
 (deftest a-test
   (testing "FIXME, I fail."
