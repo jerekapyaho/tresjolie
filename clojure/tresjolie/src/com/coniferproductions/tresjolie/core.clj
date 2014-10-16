@@ -12,7 +12,7 @@
   [id code name lat lon])
 
 ; Reads the stops from a CSV file into Stop records
-(defn stop-records
+(defn stop-records-from-csv
   [file-name]
   (with-open [f (io/reader file-name)]
     (doall
@@ -35,7 +35,7 @@
 ; All stops, read from CSV and coerced
 (defn all-stops
   [options]
-  (coerced-stop-records (stop-records (:filename options))))
+  (coerced-stop-records (stop-records-from-csv (:filename options))))
 
 ; Approximate geographical location of Tampere Central Square (Keskustori)
 (def tampere-central-square [61.508056 23.768056])
@@ -51,16 +51,8 @@
                   ["-h" "--help"]
                   ])
 
-; Options and arguments for testing, can be used in the REPL
-(def test-options {:filename "/Users/Jere/tmp/stops.csv" 
-                   :latitude (first tampere-central-square) 
-                   :longitude (last tampere-central-square)
-                   :distance 1.5
-                   :source "json"})
-(def test-arguments ["generate" "locate"])
-
 (defn usage [options-summary]
-  (->> ["Process a GTFS stops.txt file and generate source code, or report stops within a given distance from the specified location."
+  (->> ["Process a GTFS stops.txt file or use the Journeys API to load stop points. Generate source code, or report stops within a given distance from the specified location."
         ""
         "Usage: tresjolie [options] action"
         ""
@@ -90,6 +82,18 @@
 (def sql-source-template "INSERT INTO stops_tre (stop_id, stop_code, stop_name, stop_lat, stop_lon) VALUES (%s, '%s', '%s', %s, %s);")
 (def csv-source-template "%d,%s,%s,%s,%s")
 
+; Source generation templates as a map
+(def source-templates {:java "stops.add(new Stop(%d, \"%s\", \"%s\", %s, %s));"
+                       :objc "[[BMStop alloc] initWithDictionary:@{ @\"stopID\": @(%d), @\"stopCode\": @\"%s\", @\"stopName\": @\"%s\", @\"stopLatitude\": @(%s), @\"stopLongitude\": @(%s) }],"
+                       :csharp "this.Items.Add(new ItemViewModel() { StopID = %d, StopCode = \"%s\", StopName = \"%s\", StopLatitude = %s, StopLongitude = %s });"
+                       :sql "INSERT INTO stops_tre (stop_id, stop_code, stop_name, stop_lat, stop_lon) VALUES (%s, '%s', '%s', %s, %s);"
+                       :csv "%d,%s,%s,%s,%s"})
+
+; One line of source code for one stop, in the chosen template
+(defn source-line
+  [options s]
+  (format ((:source options) source-templates) (:id s) (:code s) (:name s) (:lat s) (:lon s)))
+  
 (defn generated-source 
   [options] 
   (case (:source options)
@@ -103,7 +107,7 @@
     "csv" ((doseq [x (all-stops options)]
             (println (format csv-source-template (:id x) (:code x) (:name x) (:lat x) (:lon x))))
     "java" (doseq [x (all-stops options)] 
-             (println (format java-source-template (:id x) (:code x) (:name x) (:lat x) (:lon x))))))
+             (println (format java-source-template (:id x) (:code x) (:name x) (:lat x) (:lon x)))))))
 ; This function was originally named 'source', but there already is clojure.repl/source.
 ; Took me a while to realize what "Source not found" from REPL actually meant...
 
