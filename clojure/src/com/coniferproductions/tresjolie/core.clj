@@ -1,10 +1,10 @@
-(ns tresjolie.core
+(ns com.coniferproductions.tresjolie.core
   (:require [clojure.data.csv :as csv]
             [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
             [clojure.data.json :as json]
-            [tresjolie.geodesy :as geo])
+            [com.coniferproductions.tresjolie.geodesy :as geo])
   (:gen-class))
 
 ; Defines a Stop record with the customary fields
@@ -14,7 +14,10 @@
 ; Reads the stops from a CSV file into Stop records
 (defn stop-records
   [file-name]
-  (with-open [f (io/reader file-name)]    (doall      (->> (csv/read-csv f)        (map #(apply ->Stop %))))))
+  (with-open [f (io/reader file-name)]
+    (doall
+      (->> (csv/read-csv f)
+        (map #(apply ->Stop %))))))
 
 ; Coerces the fields of a Stop record from strings into data
 (defn coerced-stop-record
@@ -78,8 +81,8 @@
   (println msg)
   (System/exit status))
 
-; Source generation templates. These probably won't make much sense to you as such,
-; but you are free to replace them with your own. Note that the double values are emitted
+; Source generation templates. These probably won't make much sense for your project as such,
+; but you are free to replace them with your own. Note that all double values are emitted
 ; as strings.
 (def java-source-template "stops.add(new Stop(%d, \"%s\", \"%s\", %s, %s));")
 (def objc-source-template "[[BMStop alloc] initWithDictionary:@{ @\"stopID\": @(%d), @\"stopCode\": @\"%s\", @\"stopName\": @\"%s\", @\"stopLatitude\": @(%s), @\"stopLongitude\": @(%s) }],")

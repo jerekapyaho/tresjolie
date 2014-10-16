@@ -1,4 +1,4 @@
-(ns tresjolie.geodesy)
+(ns com.coniferproductions.tresjolie.geodesy)
 
 ; Playing around with geodesy,
 ; based on http://www.movable-type.co.uk/scripts/latlong.html,
