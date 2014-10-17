@@ -11,7 +11,8 @@ import pprint
 import json
 import itertools
 import statistics # Python 3.4 or later
-from urllib.request import urlopen
+import urllib
+import urllib.request
 import argparse
 
 import geodesy # pull in our own utility functions
@@ -190,25 +191,85 @@ def csv_main(args):
     print('%d stop distances, mean distance = %.f km, median distance = %.f km' % (len(distances), statistics.mean(distances), statistics.median(distances)))
 
 JOURNEYS_API = 'http://data.itsfactory.fi/journeys/api/1/'
-ENDPOINT_STOP_POINTS = JOURNEYS_API + 'stop-points'  # returns all stop points
+ENDPOINT_STOP_POINTS = 'stop-points'  # returns all stop points
+# For Journeys API documentation, see http://wiki.itsfactory.fi/index.php/Journeys_API
 
-arguments = [ {'short_name': '-f', 'long_name': '--filename FILENAME', 'help': 'Filename of stops file'},
-              {'short_name': '-d', 'long_name': '--distance DISTANCE', 'help': 'Distance from current location in kilometers'} ]
-#             ["-a", "--latitude LATITUDE", "Latitude of current location in decimal degrees"] 
-#             ["-o", "--longitude LONGITUDE", "Longitude of current location in decimal degrees"],
-#             ["-d", "--distance DISTANCE", "Distance from current location in kilometers"],
-#             ["-s", "--source SOURCE" "Generate source code in SOURCE, where SOURCE = json | csharp | java | objc | sql | csv"]]
+def api_main(args):
+    url = JOURNEYS_API + ENDPOINT_STOP_POINTS
+    print('Loading stop points from %s' % url)
+    response = urllib.request.urlopen(url)
+    # urlopen returns bytes, but we know they're UTF-8
+    reader = codecs.getreader("utf-8")
+    json_data = json.load(reader(response))
+    #print json.dumps(json_data, indent=4)
+
+    # The JSON returned from Journeys API is JSend-compatible.
+    # See http://labs.omniti.com/labs/jsend for details.
+    stops = json_data['body']
+    print('Got %d stops' % len(stops))
+
+    all_stops = []
+    # Collect the municipality counts
+    municipalities = []
+
+    municipality_names = {}
+
+    for stop in stops:
+        coords = stop['location'].split(',')
+        stop_lat = float(coords[0])
+        stop_lon = float(coords[1])
+        #print('%s %s (%.5f,%.5f)' % (stop['shortName'], stop['name'], stop_lat, stop_lon))
+    
+        muni_code = stop['municipality']['shortName']
+        municipalities.append(muni_code)
+
+        muni_name = stop['municipality']['name']
+        if not muni_name in municipality_names:
+            municipality_names[muni_code] = muni_name
+        
+        current_stop = { 'code': stop['shortName'], 
+                         'name': stop['name'],
+                         'lat': stop_lat,
+                         'lon': stop_lon,
+                         'muni': muni_code,
+                         'zone': stop['tariffZone'] }
+        all_stops.append(current_stop)
+    
+    print(json.dumps(all_stops, indent=4))
+    print('Number of stops = %d' % len(all_stops))
+
+    # Now generate some Parse-compatible JSON.
+    # For Parse bulk imports we need the data to be inside a 'results' array.
+    data = { 'results': [] }
+    
+    for stop in all_stops:
+        j = { 'code': stop['code'], 
+              'name': stop['name'],
+              'muni': stop['muni'] }
+        
+        if 'stop_dir' in stop:
+            j['dir'] = stop['dir']
+            
+        if 'stop_lines' in stop:
+            j['lines'] = stop['lines'].split(' ')  # use a JSON array
+            
+        # Make a Parse-compatible GeoPoint object from the stop coordinates
+        gp = { '__type': 'GeoPoint', 'latitude': float(stop['lat']), 'longitude': float(stop['lon']) }
+        j['location'] = gp
+        
+        data['results'].append(j)
+    print(json.dumps(data))
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process a GTFS stops.txt file or use the Journeys API to load stop points. Generate source code, or report stops within a given distance from the specified location.')
     parser.add_argument('-d', '--distance', type=float, help='Distance from current location in kilometers', default=0.5)
     parser.add_argument('-f', '--filename', help='Filename of stops file', default='stops.txt')
     parser.add_argument('-p', '--path', help='Path of related data files. Must have a trailing path separator.')
+    parser.add_argument('-a', '--latitude', help='Latitude of current location in decimal degrees')
+    parser.add_argument('-o', '--longitude', help='Longitude of current location in decimal degrees')    
     parser.add_argument('-s', '--source', help='Generate source code in SOURCE, where SOURCE = json | csharp | java | objc | sql | csv', default='json')
-
     args = parser.parse_args()
-    print('Distance = %f' % (args.distance))
-    print('Stops file = %s' % (args.filename))
-    print('Source = %s' % (args.source))
 
-    csv_main(args)
+    #csv_main(args)
+    api_main(args)
