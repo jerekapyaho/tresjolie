@@ -11,12 +11,25 @@ import pprint
 import json
 import itertools
 import statistics # Python 3.4 or later
+from urllib.request import urlopen
+import argparse
 
 import geodesy # pull in our own utility functions
 
-def main(argv):
+# Credit: http://stackoverflow.com/questions/2870466/python-histogram-one-liner
+def histogram(L):
+    d = {}
+    for x in L:
+        if x in d:
+            d[x] += 1
+        else:
+            d[x] = 1
+    return d
+
+
+def csv_main(args):
     # Look at the command line to find out which type of output is wanted.
-    src_language = argv[0]
+    src_language = args.source
     if src_language == 'java':
         src_template = 'stops.add(new Stop(%d, "%s", "%s", %s, %s, "%s", "%s", "%s"));'
     elif src_language == 'csharp':
@@ -34,20 +47,22 @@ def main(argv):
         sys.exit(-1)
 
     #print('Source code to generate: ', src_language)
+
+    data_path = args.path
     
-    data_path = argv[1]
-                        
     # Set this to True if there is something wrong with the results
     check_output = False
     
     # Dictionary, where each entry has key = stop ID, value = other stop attributes
     all_stops = {}
 
+    data_filename = data_path + args.filename
+    
     # Read the master stops file and create entries in all_stops.
     # NOTE: We will treat all values as strings since we're generating source code.
     # If we need to do calculations, the latitude and longitude values are 
     # explicitly converted to floats as needed.   
-    with codecs.open(data_path + 'stops.csv', encoding='utf-8') as infile:
+    with codecs.open(data_filename, encoding='utf-8') as infile:
         reader = csv.reader(infile)
         for columns in reader:
             stop_id = int(columns[0])
@@ -173,6 +188,27 @@ def main(argv):
     print('Municipalities: ', munis)
     print('Average latitude = %.f, computed Earth radius = %.f km' % (avg_lat, earth_radius))
     print('%d stop distances, mean distance = %.f km, median distance = %.f km' % (len(distances), statistics.mean(distances), statistics.median(distances)))
-        
-if __name__ == "__main__":
-    main(sys.argv[1:])
+
+JOURNEYS_API = 'http://data.itsfactory.fi/journeys/api/1/'
+ENDPOINT_STOP_POINTS = JOURNEYS_API + 'stop-points'  # returns all stop points
+
+arguments = [ {'short_name': '-f', 'long_name': '--filename FILENAME', 'help': 'Filename of stops file'},
+              {'short_name': '-d', 'long_name': '--distance DISTANCE', 'help': 'Distance from current location in kilometers'} ]
+#             ["-a", "--latitude LATITUDE", "Latitude of current location in decimal degrees"] 
+#             ["-o", "--longitude LONGITUDE", "Longitude of current location in decimal degrees"],
+#             ["-d", "--distance DISTANCE", "Distance from current location in kilometers"],
+#             ["-s", "--source SOURCE" "Generate source code in SOURCE, where SOURCE = json | csharp | java | objc | sql | csv"]]
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Process a GTFS stops.txt file or use the Journeys API to load stop points. Generate source code, or report stops within a given distance from the specified location.')
+    parser.add_argument('-d', '--distance', type=float, help='Distance from current location in kilometers', default=0.5)
+    parser.add_argument('-f', '--filename', help='Filename of stops file', default='stops.txt')
+    parser.add_argument('-p', '--path', help='Path of related data files. Must have a trailing path separator.')
+    parser.add_argument('-s', '--source', help='Generate source code in SOURCE, where SOURCE = json | csharp | java | objc | sql | csv', default='json')
+
+    args = parser.parse_args()
+    print('Distance = %f' % (args.distance))
+    print('Stops file = %s' % (args.filename))
+    print('Source = %s' % (args.source))
+
+    csv_main(args)
