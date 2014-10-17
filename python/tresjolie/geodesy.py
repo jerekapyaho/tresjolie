@@ -53,3 +53,50 @@ def haversine(lat1_deg, lon1_deg, lat2_deg, lon2_deg, earth_radius=EARTH_EQUATOR
     d = earth_radius * c
 
     return d
+
+
+MIN_LAT = math.radians(-90)
+MAX_LAT = math.radians(90)
+MIN_LON = math.radians(-180)
+MAX_LON = math.radians(180)
+    
+def bounding_box(lat_deg, lon_deg, distance, radius=EARTH_EQUATORIAL_RADIUS):
+    """
+    Computes the bounding coordinates of all points on the surface
+    of a sphere that has a great circle distance to the coordinates
+    by this GeoLocation instance that is less or equal to the distance argument.
+        
+    distance - the distance from the coordinate point on kilometers            
+    radius   - the radius of the sphere in kilometers
+            
+    Returns a tuple with two elements. They are themselves tuples, with the
+    latitude and longitude of the SW and NE corner of the bounding box.
+    """
+    # Compute the angular distance in radians on the great circle
+    rad_dist = distance / radius
+        
+    lat = math.radians(lat_deg)
+    lon = math.radians(lon_deg)
+        
+    min_lat = lat - rad_dist
+    max_lat = lat + rad_dist
+        
+    if min_lat > MIN_LAT and max_lat < MAX_LAT:
+        delta_lon = math.asin(math.sin(rad_dist) / math.cos(lat))
+            
+        min_lon = lon - delta_lon
+        if min_lon < MIN_LON:
+            min_lon += 2 * math.pi
+                
+        max_lon = lon + delta_lon
+        if max_lon > MAX_LON:
+            max_lon -= 2 * math.pi
+    # a pole is within the distance
+    else:
+        min_lat = max(min_lat, MIN_LAT)
+        max_lat = min(max_lat, MAX_LAT)
+        min_lon = MIN_LON
+        max_lon = MAX_LON
+        
+    return ((math.degrees(min_lat), math.degrees(min_lon)),
+            (math.degrees(max_lat), math.degrees(max_lon))) 
