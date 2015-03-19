@@ -1,7 +1,5 @@
 .DS_Store
 
-# Python files
-python/tresjolie/__pycache__/
-python/*.py[cod]
+# Python files to ignore are listed in python/.gitignore
 
 # Haskell files are listed in haskell/.gitignore

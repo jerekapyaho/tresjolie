@@ -15,6 +15,8 @@ import urllib
 import urllib.request
 import argparse
 
+import requests
+
 import geodesy # pull in our own utility functions
 
 # Credit: http://stackoverflow.com/questions/2870466/python-histogram-one-liner
@@ -227,12 +229,18 @@ ENDPOINT_STOP_POINTS = 'stop-points'  # returns all stop points
 def api_main(args):
     url = JOURNEYS_API + ENDPOINT_STOP_POINTS
     print('Loading stop points from %s' % url)
-    response = urllib.request.urlopen(url)
+    
+    r = requests.get(url)
+    
+    #response = urllib.request.urlopen(url)
     # urlopen returns bytes, but we know they're UTF-8
-    reader = codecs.getreader("utf-8")
-    json_data = json.load(reader(response))
+    #reader = codecs.getreader("utf-8")
+    #json_data = json.load(reader(response))
     #print json.dumps(json_data, indent=4)
 
+    json_data = r.json()
+    #print(json_data)
+    
     # The JSON returned from Journeys API is JSend-compatible.
     # See http://labs.omniti.com/labs/jsend for details.
     stops = json_data['body']
