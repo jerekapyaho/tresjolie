@@ -2,7 +2,7 @@
 # Pass an argument to determine the output language: java, csharp, objc.
 # Uses several input files to synthesize the data.
 
-# Note: requires Python3 for Unicode-aware CSV handling
+# Note: requires Python 3 for Unicode-aware CSV handling
 
 import csv
 import sys
@@ -11,10 +11,9 @@ import pprint
 import json
 import itertools
 import statistics # Python 3.4 or later
-import urllib
-import urllib.request
 import argparse
-
+import re
+import os
 import requests
 
 import geodesy # pull in our own utility functions
@@ -28,7 +27,57 @@ def histogram(L):
         else:
             d[x] = 1
     return d
+    
+    
+def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
+    return [int(text) if text.isdigit() else text.lower()
+            for text in re.split(_nsre, s)]
 
+class Stop:
+    def __init__(self, code, name, latitude, longitude, direction=None, lines=[], municipality='', zone=''):
+        self.code = code
+        self.name = name
+        self.latitude = latitude
+        self.longitude = longitude
+        self.direction = direction
+        self.lines = lines
+        self.municipality = municipality
+        self.zone = zone
+
+    def as_csv(self):
+        stop_lines = ' '.join(self.lines)
+        return '%d,%s,%s,%.5f,%.5f,%s,%s,%s,%s' % (int(self.code), self.code, self.name, self.latitude, self.longitude, self.direction or '', stop_lines, self.municipality, self.zone)
+
+    def as_json(self):
+        return {'code': self.code, 
+                'name': self.name, 
+                'latitude': self.latitude, 
+                'longitude': self.longitude, 
+                'direction': self.direction, 
+                'lines': self.lines,
+                'municipality': self.municipality,
+                'zone': self.zone}
+
+    def as_java(self):
+        stop_lines = ' '.join(self.lines)
+        src_template = 'stops.add(new Stop(%d, "%s", "%s", %s, %s, "%s", "%s", "%s", "%s"));'
+        return src_template % (int(self.code), self.code, self.name, self.latitude, self.longitude, self.direction or '', stop_lines, self.municipality, self.zone) 
+                            
+    def as_source(self, src):
+        result = None
+    
+        if src == 'csv':
+            result = self.as_csv()
+        elif src == 'json':
+            result = self.as_json()
+        elif src == 'java':
+            result = self.as_java()
+        
+        return result
+        
+    def __repr__(self):
+        fmt = 'Stop: code=%s name="%s" latitude=%.5f longitude=%.5f'
+        return fmt.format(self.code, self.name, self.latitude, self.longitude)
 
 def csv_main(args):
     # Look at the command line to find out which type of output is wanted.
@@ -194,17 +243,33 @@ def csv_main(args):
 
 
 def csv_row(stop):
-    """
-    Constructs a CSV row from the stop.
-    """
-    columns = [stop['code'], stop['name'], str(stop['lat']), str(stop['lon']), stop['muni'], stop['zone']]    
+    """Constructs a CSV row from the stop."""
+    dir = ''
+    if 'dir' in stop:
+        dir = stop['dir']
+        
+    stop_lines = ' '.join(stop['lines'])
+        
+    columns = [stop['code'], stop['name'], str(stop['lat']), str(stop['lon']), dir, stop_lines, stop['muni'], stop['zone']]
     return ','.join(columns)
 
 
+def read_dirs(dir_file):
+    dirs = {}
+    f = open(dir_file, 'r')
+    try:
+        reader = csv.reader(f)
+        row_num = 0
+        for row in reader:
+            dirs[row[0]] = row[1]
+            row_num += 1
+    finally:
+        f.close()
+    return dirs    
+    
+    
 def json_object(stop):
-    """
-    Constructs a Parse-compatible JSON object from the stop.
-    """
+    """Constructs a Parse-compatible JSON object from the stop."""
     j = { 'code': stop['code'], 
           'name': stop['name'],
           'muni': stop['muni'] }
@@ -221,108 +286,169 @@ def json_object(stop):
     
     return j
 
-# Use the Journeys API to get stop points
+# Use the Journeys API to get stop points.
+# See http://wiki.itsfactory.fi/index.php/Journeys_API
 JOURNEYS_API = 'http://data.itsfactory.fi/journeys/api/1/'
 ENDPOINT_STOP_POINTS = 'stop-points'  # returns all stop points
-# For Journeys API documentation, see http://wiki.itsfactory.fi/index.php/Journeys_API
+ENDPOINT_JOURNEYS = 'journeys'
+ENDPOINT_LINES = 'lines'
 
-def api_main(args):
-    url = JOURNEYS_API + ENDPOINT_STOP_POINTS
-    print('Loading stop points from %s' % url)
+
+def collect(data_path, dir_file):
+    dir_filename = os.path.join(data_path, dir_file)
+    directions = read_dirs(dir_filename)
+    print('Read %d stop directions from CSV file "%s".' % (len(directions), dir_filename))
     
+    request_count = 0   # how many Journeys API requests we have made
+    url = JOURNEYS_API + ENDPOINT_LINES
+    print('Loading lines from Journeys API, url = "%s"' % url)
     r = requests.get(url)
-    
-    #response = urllib.request.urlopen(url)
-    # urlopen returns bytes, but we know they're UTF-8
-    #reader = codecs.getreader("utf-8")
-    #json_data = json.load(reader(response))
-    #print json.dumps(json_data, indent=4)
-
+    request_count += 1
     json_data = r.json()
-    #print(json_data)
+    lines = json_data['body']
+    print('Read %d lines from Journeys API.' % len(lines))
+        
+    all_lines = [{'name': line['name'], 'description': line['description']} for line in lines]
+    
+    # Now we have a list of all the lines.
+
+    url = JOURNEYS_API + ENDPOINT_STOP_POINTS
+    print('Loading stop points from Journeys API, url = "%s"' % url)
+    r = requests.get(url)
+    request_count += 1
+    json_data = r.json()
     
     # The JSON returned from Journeys API is JSend-compatible.
     # See http://labs.omniti.com/labs/jsend for details.
     stops = json_data['body']
-    print('Got %d stops' % len(stops))
+    print('Loaded %d stop points from Journeys API.' % len(stops))
 
     all_stops = []
-    # Collect the municipality counts
-    municipalities = []
 
-    municipality_names = {}
-
-    for stop in stops:
-        coords = stop['location'].split(',')
-        stop_lat = float(coords[0])
-        stop_lon = float(coords[1])
-    
-        muni_code = stop['municipality']['shortName']
-        municipalities.append(muni_code)
-
-        muni_name = stop['municipality']['name']
-        if not muni_name in municipality_names:
-            municipality_names[muni_code] = muni_name
+    for s in stops:
+        stop_request_count = 0  # how many requests for this stop only
         
-        current_stop = { 'code': stop['shortName'], 
-                         'name': stop['name'],
-                         'lat': stop_lat,
-                         'lon': stop_lon,
-                         'muni': muni_code,
-                         'zone': stop['tariffZone'] }
-        all_stops.append(current_stop)
-    
-    if args.source == 'json':
-        # Generate some Parse-compatible JSON.
-        # For Parse bulk imports we need the data to be inside a 'results' array.
-        data = { 'results': [] }
-        for stop in all_stops:
-            data['results'].append(json_object(stop))
-        print(json.dumps(data))
-    
-    elif args.source == 'csv':
-        for stop in all_stops:
-            print(csv_row(stop))
+        coords = s['location'].split(',')
+        stop = Stop(s['shortName'], s['name'], float(coords[0]), float(coords[1]))
+
+        stop.municipality = None
+        if 'municipality' in s:
+            stop.municipality = s['municipality']['shortName']
+
+        stop_request_counts = []  # save the number of requests made for each stop
+
+        url = JOURNEYS_API + ENDPOINT_JOURNEYS
+        params = {'stopPointId': stop.code}
+        #print('Params for %s = %s' % (url, params))
+        r = requests.get(url, params=params)
+        stop_request_count += 1
+        json_data = r.json()
+
+        # Load all journeys for this stop point
+        stop_journeys = []
+        if json_data['status'] == 'success':
+            for i in json_data['body']:
+                stop_journeys.append(i)
+            #print(len(stop_journeys))
+            paging = json_data['data']['headers']['paging']
+            page_size = paging['pageSize']
+            have_more_data = paging['moreData']
+            #print('have_more_data =', have_more_data)
+            next_index = paging['startIndex'] + page_size
+            while have_more_data:
+                #print('Getting more data, startIndex = %d' % next_index)
+                params['startIndex'] = next_index
+                paging_request = requests.get(url, params=params)
+                stop_request_count += 1
+                #print(paging_request.url)
+                more_data = paging_request.json()
+                for i in more_data['body']:
+                    stop_journeys.append(i)
+                #print(len(stop_journeys))
+                more_paging = more_data['data']['headers']['paging']
+                have_more_data = more_paging['moreData']
+                page_size = more_paging['pageSize']
+                next_index = more_paging['startIndex'] + page_size
+                
+        line_urls = []
+        for j in stop_journeys:
+            line_urls.append(j['lineUrl'])
+        
+        # Find the unique line URLs by turning the list into a set
+        unique_line_urls = set(line_urls)
+        #print(len(line_urls), ' / ', len(unique_line_urls))        
+        #print(unique_line_urls)
+        
+        # Turn the uniqued line URLs back into a list.
+        stop_line_urls = list(unique_line_urls)
+        
+        # Actually we can just get the line's name from the line URL.
+        # We don't need to hit the lines API endpoint, since we only
+        # need the names.
+        line_names = []
+        for u in stop_line_urls:
+            pos = u.rfind('/')
+            line_name = u[pos + 1 :]
+            line_names.append(line_name)
             
+        stop.zone = s['tariffZone']
+        
+        #print('line_names = %s' % line_names)
+        stop.lines = sorted(line_names, key=natural_sort_key)
+        
+        stop.direction = None
+        if stop.code in directions:
+            stop.direction = directions[stop.code]
+        
+        all_stops.append(stop)
+        
+        stop_request_counts.append(stop_request_count)
+        request_count += stop_request_count
+
+        print('%s %s: requests = %d, total = %d' % (stop.code, stop.name, stop_request_count, request_count))        
+
+    # Now we have a list of all the stops.
+                
+    print('Requests to Journeys API: %d' % request_count)
+    print('Average requests per stop: %.1f' % (sum(stop_request_counts) / float(len(stop_request_counts))))
+    
+    data = {'stops': [], 'lines': all_lines}
+    for stop in all_stops:
+        data['stops'].append(stop.as_json())
+    return data
+
+            
+def locate(latitude, longitude, distance):
+    # Get a bounding box around the location
+    sw_corner, ne_corner = geodesy.bounding_box(lat, lon, distance)
+    location_param = 'location=%.5f,%.5f:%.5f,%.5f' % (sw_corner[0], sw_corner[1], ne_corner[0], ne_corner[1])
+
+    url = JOURNEYS_API + ENDPOINT_STOP_POINTS
+    params = {'location': location_param}
+    r = requests.get(url, params=params)
+    print('Loading stop points from %s' % url)
+    
+    json_data = r.json()
+    return json_data['body']
+
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Process a GTFS stops.txt file or use the Journeys API to load stop points. Generate source code, or report stops within a given distance from the specified location.')
-    parser.add_argument('action', help='What to do; one of generate | locate')
+    parser = argparse.ArgumentParser(description='Load stop points from Journeys API. Generate source code, or report stops within a given distance from the specified location.')
+    parser.add_argument('action', help='What to do; one of collect | locate')
     parser.add_argument('-d', '--distance', type=float, help='Distance from current location in kilometers', default=0.5)
-    parser.add_argument('-f', '--filename', help='Filename of stops file', default='stops.txt')
-    parser.add_argument('-p', '--path', help='Path of related data files. Must have a trailing path separator.')
+    parser.add_argument('-i', '--dirfile', help='Filename of directions CSV file', default='stop_directions.csv')
+    parser.add_argument('-p', '--path', help='Path of related data files', default='.')
     parser.add_argument('-a', '--latitude', help='Latitude of current location in decimal degrees', type=float)
     parser.add_argument('-o', '--longitude', help='Longitude of current location in decimal degrees', type=float)    
-    parser.add_argument('-s', '--source', help='Generate source code in SOURCE, where SOURCE = json | csharp | java | objc | sql | csv', default='json')
     args = parser.parse_args()
 
-    #csv_main(args)
-    if args.action == 'generate':
-        api_main(args)
+    if args.action == 'collect':
+        data = collect(args.path, args.dirfile)
+        print(json.dumps(data))
     elif args.action == 'locate':
-        # Get the location and the desired distance
-        lat = args.latitude
-        lon = args.longitude
-        distance = args.distance
-        
-        # Get a bounding box around the location
-        sw_corner, ne_corner = geodesy.bounding_box(lat, lon, distance)
-        location_params = 'location=%.5f,%.5f:%.5f,%.5f' % (sw_corner[0], sw_corner[1], ne_corner[0], ne_corner[1])
-
-        url = JOURNEYS_API + ENDPOINT_STOP_POINTS + '?' + location_params
-        print('Loading stop points from %s' % url)
-        response = urllib.request.urlopen(url)
-        # urlopen returns bytes, but we know they're UTF-8
-        reader = codecs.getreader("utf-8")
-        json_data = json.load(reader(response))
-        stops = json_data['body']
-        print(stops)
-        
-        for stop in stops:
-            print('%s %s' % (stop['shortName'], stop['name']))
-
+        nearest_stops = locate(args.latitude, args.longitude, args.distance)
+        for stop in nearest_stops:
+            print('%s %s' % (stop['shortName'], stop['name']))        
     else:
         print('Unknown action:', args.action)
         parser.print_help()
-        
-        
