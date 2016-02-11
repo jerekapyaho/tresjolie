@@ -6,6 +6,7 @@ import argparse
 import re
 import os
 import requests
+import logging
 
 def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
     return [int(text) if text.isdigit() else text.lower()
@@ -91,7 +92,7 @@ def lines_for_stop(stop_code):
     r = requests.get(url, params=params)
     json_data = r.json()
     lines = json_data['body']
-    print('stop %s - %d lines.' % (stop_code, len(lines)))
+    logging.info('stop %s - %d lines' % (stop_code, len(lines)))
     stop_lines = []
     for line in lines:
         stop_lines.append({'name': line['name'], 'description': line['description']})
@@ -101,19 +102,17 @@ def lines_for_stop(stop_code):
 def collect(data_path, dir_file):
     dir_filename = os.path.join(data_path, dir_file)
     directions = read_dirs(dir_filename)
-    print('Read %d stop directions from CSV file "%s".' % (len(directions), dir_filename))
+    logging.info('Read %d stop directions from CSV file "%s".' % (len(directions), dir_filename))
     
     url = JOURNEYS_API + ENDPOINT_LINES
     #print('Loading lines from Journeys API, url = "%s"' % url)
     r = requests.get(url)
     json_data = r.json()
     lines = json_data['body']
-    print('Read %d lines from Journeys API.' % len(lines))
+    logging.info('Read %d lines from Journeys API.' % len(lines))
         
     all_lines = [{'name': line['name'], 'description': line['description']} for line in lines]
     
-    # Now we have a list of all the lines.
-
     url = JOURNEYS_API + ENDPOINT_STOP_POINTS
     #print('Loading stop points from Journeys API, url = "%s"' % url)
     r = requests.get(url)
@@ -122,7 +121,7 @@ def collect(data_path, dir_file):
     # The JSON returned from Journeys API is JSend-compatible.
     # See http://labs.omniti.com/labs/jsend for details.
     stops = json_data['body']
-    print('Loaded %d stop points from Journeys API.' % len(stops))
+    logging.info('Loaded %d stop points from Journeys API.' % len(stops))
 
     all_stops = []
 
@@ -160,7 +159,7 @@ def locate(latitude, longitude, distance):
     url = JOURNEYS_API + ENDPOINT_STOP_POINTS
     params = {'location': location_param}
     r = requests.get(url, params=params)
-    print('Loading stop points from %s' % url)
+    logging.info('Loading stop points from %s' % url)
     
     json_data = r.json()
     return json_data['body']
