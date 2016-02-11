@@ -31,7 +31,9 @@ and one for [Haskell](http://www.haskell.org).
 ### Python notes
 
 The Python version requires Python 3 or later. There's no specific setup;
-just execute the script in _python/tresjolie_.
+just execute the script in _python/tresjolie_. Actually, there are several
+scripts, because the toolchain has not stabilized, so take from it what
+is useful to you.
 
 ### Clojure notes
 
@@ -62,6 +64,6 @@ It's a pun, of course:
 
 ## License
 
-Copyright © 2014 Conifer Productions Oy
+Copyright © 2014-2016 Conifer Productions Oy
 
 Distributed under the MIT License.
