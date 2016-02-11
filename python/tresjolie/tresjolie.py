@@ -298,17 +298,28 @@ ENDPOINT_STOP_POINTS = 'stop-points'  # returns all stop points
 ENDPOINT_JOURNEYS = 'journeys'
 ENDPOINT_LINES = 'lines'
 
+def lines_for_stop(stop_code):
+    url = JOURNEYS_API + ENDPOINT_LINES
+    #print('Loading lines for stop %s from Journeys API, url = "%s"' % (stop_code, url))
+    params = {'stopPointId': stop_code}
+    r = requests.get(url, params=params)
+    json_data = r.json()
+    lines = json_data['body']
+    print('stop %s - %d lines.' % (stop_code, len(lines)))
+    stop_lines = []
+    for line in lines:
+        stop_lines.append({'name': line['name'], 'description': line['description']})
+    return stop_lines
+
 
 def collect(data_path, dir_file):
     dir_filename = os.path.join(data_path, dir_file)
     directions = read_dirs(dir_filename)
     print('Read %d stop directions from CSV file "%s".' % (len(directions), dir_filename))
     
-    request_count = 0   # how many Journeys API requests we have made
     url = JOURNEYS_API + ENDPOINT_LINES
-    print('Loading lines from Journeys API, url = "%s"' % url)
+    #print('Loading lines from Journeys API, url = "%s"' % url)
     r = requests.get(url)
-    request_count += 1
     json_data = r.json()
     lines = json_data['body']
     print('Read %d lines from Journeys API.' % len(lines))
@@ -318,9 +329,8 @@ def collect(data_path, dir_file):
     # Now we have a list of all the lines.
 
     url = JOURNEYS_API + ENDPOINT_STOP_POINTS
-    print('Loading stop points from Journeys API, url = "%s"' % url)
+    #print('Loading stop points from Journeys API, url = "%s"' % url)
     r = requests.get(url)
-    request_count += 1
     json_data = r.json()
     
     # The JSON returned from Journeys API is JSend-compatible.
@@ -331,74 +341,17 @@ def collect(data_path, dir_file):
     all_stops = []
 
     for s in stops:
-        stop_request_count = 0  # how many requests for this stop only
-        
         coords = s['location'].split(',')
         stop = Stop(s['shortName'], s['name'], float(coords[0]), float(coords[1]))
 
         stop.municipality = None
         if 'municipality' in s:
             stop.municipality = s['municipality']['shortName']
-
-        stop_request_counts = []  # save the number of requests made for each stop
-
-        url = JOURNEYS_API + ENDPOINT_JOURNEYS
-        params = {'stopPointId': stop.code}
-        #print('Params for %s = %s' % (url, params))
-        r = requests.get(url, params=params)
-        stop_request_count += 1
-        json_data = r.json()
-
-        # Load all journeys for this stop point
-        stop_journeys = []
-        if json_data['status'] == 'success':
-            for i in json_data['body']:
-                stop_journeys.append(i)
-            #print(len(stop_journeys))
-            paging = json_data['data']['headers']['paging']
-            page_size = paging['pageSize']
-            have_more_data = paging['moreData']
-            #print('have_more_data =', have_more_data)
-            next_index = paging['startIndex'] + page_size
-            while have_more_data:
-                #print('Getting more data, startIndex = %d' % next_index)
-                params['startIndex'] = next_index
-                paging_request = requests.get(url, params=params)
-                stop_request_count += 1
-                #print(paging_request.url)
-                more_data = paging_request.json()
-                for i in more_data['body']:
-                    stop_journeys.append(i)
-                #print(len(stop_journeys))
-                more_paging = more_data['data']['headers']['paging']
-                have_more_data = more_paging['moreData']
-                page_size = more_paging['pageSize']
-                next_index = more_paging['startIndex'] + page_size
-                
-        line_urls = []
-        for j in stop_journeys:
-            line_urls.append(j['lineUrl'])
-        
-        # Find the unique line URLs by turning the list into a set
-        unique_line_urls = set(line_urls)
-        #print(len(line_urls), ' / ', len(unique_line_urls))        
-        #print(unique_line_urls)
-        
-        # Turn the uniqued line URLs back into a list.
-        stop_line_urls = list(unique_line_urls)
-        
-        # Actually we can just get the line's name from the line URL.
-        # We don't need to hit the lines API endpoint, since we only
-        # need the names.
-        line_names = []
-        for u in stop_line_urls:
-            pos = u.rfind('/')
-            line_name = u[pos + 1 :]
-            line_names.append(line_name)
-            
         stop.zone = s['tariffZone']
         
-        #print('line_names = %s' % line_names)
+        stop_lines = lines_for_stop(stop.code)
+        
+        line_names = [line['name'] for line in stop_lines]
         stop.lines = sorted(line_names, key=natural_sort_key)
         
         stop.direction = None
@@ -406,17 +359,7 @@ def collect(data_path, dir_file):
             stop.direction = directions[stop.code]
         
         all_stops.append(stop)
-        
-        stop_request_counts.append(stop_request_count)
-        request_count += stop_request_count
 
-        print('%s %s: requests = %d, total = %d' % (stop.code, stop.name, stop_request_count, request_count))        
-
-    # Now we have a list of all the stops.
-                
-    print('Requests to Journeys API: %d' % request_count)
-    print('Average requests per stop: %.1f' % (sum(stop_request_counts) / float(len(stop_request_counts))))
-    
     data = {'stops': [], 'lines': all_lines}
     for stop in all_stops:
         data['stops'].append(stop.as_json())
