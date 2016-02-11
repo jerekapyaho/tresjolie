@@ -2,10 +2,17 @@ import argparse
 import json
 import csv
 
-# stop_id, stop_code, stop_name, stop_latitude, stop_longitude, stop_dir, stop_lines, stop_muni, stop_zone
-sql_template = 'INSERT INTO %s VALUES (%d, \'%s\', \'%s\', %s, %s, \'%s\', \'%s\', \'%s\', \'%s\');'
+create_stop_table_sql = 'CREATE TABLE stop(stop_id INTEGER PRIMARY KEY, stop_code TEXT NOT NULL, stop_name TEXT NOT NULL, stop_lat DOUBLE NOT NULL, stop_lon DOUBLE NOT NULL, stop_dir TEXT, stop_lines TEXT, stop_muni TEXT, stop_zone TEXT);'
+create_line_table_sql = 'CREATE TABLE line(line_name TEXT PRIMARY KEY, line_desc TEXT NOT NULL);'
 
-def make_sql_from_json(json_filename, table_name):
+stop_sql_template = 'INSERT INTO stop VALUES (%d, \'%s\', \'%s\', %s, %s, \'%s\', \'%s\', \'%s\', \'%s\');'
+line_sql_template = 'INSERT INTO line VALUES (\'%s\', \'%s\');'
+
+
+def make_sql_from_json(json_filename):
+    print(create_stop_table_sql)
+    print(create_line_table_sql)
+    
     json_data = None
     with open(json_filename) as json_file:
         json_data = json.load(json_file)    
@@ -15,11 +22,14 @@ def make_sql_from_json(json_filename, table_name):
         line_str = ' '.join(s['lines'])
         dir_str = ''
         if 'dir' in s:
-            dir_str = s['dir']
+            dir_str = s['direction']
         
-        stop_code = int(s['code'])
+        statement = stop_sql_template % (int(s['code']), s['code'], s['name'], s['latitude'], s['longitude'], dir_str, line_str, s['municipality'], s['zone'])
+        print(statement)
         
-        statement = sql_template % (table_name, stop_code, s['name'], s['lat'], s['lon'], dir_str, line_str, s['muni'], s['zone'])
+    lines = json_data['lines']
+    for l in lines:
+        statement = line_sql_template % (l['name'], l['description'])
         print(statement)
 
 def make_sql_from_csv(csv_filename, table_name):
@@ -61,7 +71,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     if args.source == 'json':
-        make_sql_from_json(args.jsonfilename, args.tablename)
+        make_sql_from_json(args.jsonfilename)
     else:
         make_sql_from_csv(args.csvfilename, args.tablename)
         #make_java_from_csv(args.csvfilename)
