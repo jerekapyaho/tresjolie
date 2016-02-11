@@ -21,7 +21,7 @@ def make_sql_from_json(json_filename):
     for s in stops:
         line_str = ' '.join(s['lines'])
         dir_str = ''
-        if 'dir' in s:
+        if 'direction' in s:
             dir_str = s['direction']
         
         statement = stop_sql_template % (int(s['code']), s['code'], s['name'], s['latitude'], s['longitude'], dir_str, line_str, s['municipality'], s['zone'])
