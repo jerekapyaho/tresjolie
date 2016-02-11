@@ -49,14 +49,19 @@ class Stop:
         return '%d,%s,%s,%.5f,%.5f,%s,%s,%s,%s' % (int(self.code), self.code, self.name, self.latitude, self.longitude, self.direction or '', stop_lines, self.municipality, self.zone)
 
     def as_json(self):
-        return {'code': self.code, 
-                'name': self.name, 
-                'latitude': self.latitude, 
-                'longitude': self.longitude, 
-                'direction': self.direction, 
-                'lines': self.lines,
-                'municipality': self.municipality,
-                'zone': self.zone}
+        result = {'code': self.code, 
+                 'name': self.name, 
+                 'latitude': self.latitude, 
+                 'longitude': self.longitude,
+                 'lines': self.lines,
+                 'municipality': self.municipality,
+                 'zone': self.zone}
+                 
+        # Omit the direction value if it is not set
+        if self.direction != None:
+            result['direction'] = self.direction
+        
+        return result    
 
     def as_java(self):
         stop_lines = ' '.join(self.lines)
