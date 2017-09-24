@@ -27,10 +27,10 @@ def generate_stops(stops, source):
     for s in stops:
         #print(s)
         stop_dir = ''
-        if s['direction'] != None:
+        if 'direction' in s:
             stop_dir = s['direction']
         stop_lines = ' '.join(s['lines'])
-        statement = src_template % (int(s['code']), s['code'], s['name'], s['latitude'], s['longitude'], s['direction'] or '', stop_lines, s['municipality'] or '', s['zone'])
+        statement = src_template % (int(s['code']), s['code'], s['name'], s['latitude'], s['longitude'], stop_dir, stop_lines, s['municipality'] or '', s['zone'])
         result.append(statement)
 
     return result

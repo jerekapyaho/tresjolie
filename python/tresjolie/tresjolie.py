@@ -7,6 +7,7 @@ import re
 import os
 import requests
 import logging
+from tqdm import tqdm
 
 def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
     return [int(text) if text.isdigit() else text.lower()
@@ -125,7 +126,7 @@ def collect(data_path, dir_file):
 
     all_stops = []
 
-    for s in stops:
+    for s in tqdm(stops):
         coords = s['location'].split(',')
         stop = Stop(s['shortName'], s['name'], float(coords[0]), float(coords[1]))
 
@@ -164,6 +165,14 @@ def locate(latitude, longitude, distance):
     json_data = r.json()
     return json_data['body']
 
+# Direct logs to standard output too
+root_logger = logging.getLogger()
+#root_logger.setLevel(logging.DEBUG)
+log_handler = logging.StreamHandler(sys.stdout)
+log_handler.setLevel(logging.INFO)
+log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+log_handler.setFormatter(log_formatter)
+#root_logger.addHandler(log_handler)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Load stop points and lines from Journeys API and generate JSON, or report stops within a given distance from the specified location.')
