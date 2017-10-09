@@ -1,3 +1,5 @@
 tresjolie/__pycache__/
 *.py[cod]
 venv/
+.vscode/
+
