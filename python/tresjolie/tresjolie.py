@@ -61,7 +61,7 @@ class Stop:
         return result
         
     def __repr__(self):
-        fmt = 'Stop: code=%s name="%s" latitude=%.5f longitude=%.5f'
+        fmt = 'Stop: code={} name="{}" latitude={} longitude={}'
         return fmt.format(self.code, self.name, self.latitude, self.longitude)
 
 
