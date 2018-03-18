@@ -1,5 +1,12 @@
+# macOS specific
 .DS_Store
 
-# Python files to ignore are listed in python/.gitignore
+tresjolie/__pycache__/
+*.py[cod]
 
-# Haskell files are listed in haskell/.gitignore
+# virtualenv
+venv/
+
+# Visual Studio Code
+.vscode/
+*/.vscode/

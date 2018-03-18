@@ -16,42 +16,11 @@ The Tampere Public Transport data is released under
 [its own license](http://www.tampere.fi/tampereinfo/avoindata/avoindatalisenssi.html)
 (in Finnish only), so it is not duplicated here.
 
-These are developed more or less in parallel using Python, Clojure
-and Haskell. Time will tell which of these will become the main
-tool, but at the time of this writing (September 2014), Python is
-getting most love.
-
 ## Installation and usage
 
-There are three independent subprojects, 
-one for [Python](http://www.python.org),
-one for [Clojure](http://clojure.org),
-and one for [Haskell](http://www.haskell.org).
+The Python version requires Python 3 or later. 
 
-### Python notes
-
-The Python version requires Python 3 or later. There's no specific setup;
-just execute the script in _python/tresjolie_. Actually, there are several
-scripts, because the toolchain has not stabilized, so take from it what
-is useful to you.
-
-### Clojure notes
-
-Use [Leiningen](http://leiningen.org) to build and run.
-
-### Haskell notes
-
-The Haskell version contains a simple smoke test to exercise
-[Journeys API](http://wiki.itsfactory.fi/index.php/Journeys_API). 
-Use [`runghc`](https://www.haskell.org/ghc/docs/7.0.3/html/users_guide/runghc.html) 
-as usual to build and run.
-
-### Usage
-
-Currently the only GTFS file type processed is a stops file, usually
-found in a GTFS data dump as `stops.txt`. It is a CSV file with a header row.
-Before using it with these tools, remove the header row, and convert the file
-into UTF-8 encoding, if necessary, since that is what _tresjolie_ assumes.
+Type `python3 tresjolie.py` to show usage information.
 
 ## About the name
 
@@ -64,6 +33,6 @@ It's a pun, of course:
 
 ## License
 
-Copyright © 2014-2016 Conifer Productions Oy
+Copyright © 2014-2018 Conifer Productions Oy
 
 Distributed under the MIT License.
