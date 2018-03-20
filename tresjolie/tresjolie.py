@@ -102,8 +102,12 @@ def lines_for_stop(stop_code):
 
 def collect(data_path, dir_file):
     dir_filename = os.path.join(data_path, dir_file)
-    directions = read_dirs(dir_filename)
-    logging.info('Read %d stop directions from CSV file "%s".' % (len(directions), dir_filename))
+    directions = {}
+    if os.path.exists(dir_filename):
+        directions = read_dirs(dir_filename)
+        logging.info('Read %d stop directions from CSV file "%s".' % (len(directions), dir_filename))
+    else:
+        logging.info('No directions file found')
     
     url = JOURNEYS_API + ENDPOINT_LINES
     #print('Loading lines from Journeys API, url = "%s"' % url)
