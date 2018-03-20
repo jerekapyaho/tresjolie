@@ -20,7 +20,17 @@ The Tampere Public Transport data is released under
 
 The Python version requires Python 3 or later. 
 
-Type `python3 tresjolie.py` to show usage information.
+* Set up a virtual environment in the project directory 
+using `python3 -m venv venv`. 
+* Activate the virtual environment with `source venv/bin/activate`.
+You should see the command prompt change to indicate an active
+virtual environment.
+* Install the required dependencies. For example, to install Requests,
+type `pip3 install requests`.
+ 
+Type `cd python; python3 tresjolie.py` to show usage information.
+
+When you're done, deactivate the virtual environment with `deactivate`.
 
 ## About the name
 
