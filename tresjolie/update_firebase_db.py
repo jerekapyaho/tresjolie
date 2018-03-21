@@ -69,24 +69,24 @@ if __name__ == '__main__':
     # Find new stops (stops which are in the fresh stops list but not in current)
     current_stop_codes = [s.code for s in current_stops]
     fresh_stop_codes = [s.code for s in fresh_stops]
-    removed_stop_codes = set(fresh_stop_codes) - set(current_stop_codes)
-    print('Removed stops: %s' % removed_stop_codes)
-    added_stop_codes = set(current_stop_codes) - set(fresh_stop_codes)
-    print('Added stops: %s' % added_stop_codes)
+    removed_stop_codes = set(current_stop_codes) - set(fresh_stop_codes)
+    print('Removed stops: %s' % sorted(list(removed_stop_codes)))
+    added_stop_codes = set(fresh_stop_codes) - set(current_stop_codes)
+    print('Added stops: %s' % sorted(list(added_stop_codes)))
 
     stops = []
 
     print('Removing stops')
     for s in current_stops:
         if s.code in removed_stop_codes:
-            print('DELETE %s' % s.code)
+            print('DELETE %s/stop/%s.json' % (db_url, s.code))
         else:
             stops.append(s)
 
     print('Adding stops')
     for s in fresh_stops:
         if s.code in added_stop_codes:
-            print('PUT %s' % s.code)
+            print('PUT %s/stop/%s.json' % (db_url, s.code))
             stops.append(s)            
     
     print('Final list has %d stops' % len(stops))
@@ -103,5 +103,13 @@ if __name__ == '__main__':
             #print('%s OK' % s.code)
             pass
         else:
-            differing_stops.append(s)
-    print('Differing stops: %s' % differing_stops)
+            diff = s.difference_to(fresh_stop)
+            if diff != {}:
+                print('%s diff: %s' % (s.code, diff))
+                differing_stops.append(s)
+    #print('Differing stops: %s' % differing_stops)
+    print('There are %d differing stops' % len(differing_stops))
+
+    for s in differing_stops:
+        print('PATCH %s/stop/%s.json' % (db_url, s.code))
+
