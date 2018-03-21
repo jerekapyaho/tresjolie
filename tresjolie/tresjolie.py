@@ -34,7 +34,13 @@ class Stop:
         if 'municipality' in json:
             muni = json['municipality']
 
-        return cls(json['code'], json['name'], json['latitude'], json['longitude'], dir, json['lines'], muni, json['zone']) 
+        lines = []
+        if type(json['lines']) == dict:  # must be from Firebase
+            lines = sorted(list(json['lines'].keys()))
+        else:
+            lines = sorted(json['lines'])
+
+        return cls(json['code'], json['name'], json['latitude'], json['longitude'], dir, lines, muni, json['zone']) 
         
     def as_csv(self):
         stop_lines = ' '.join(self.lines)
@@ -78,6 +84,27 @@ class Stop:
 
     def __eq__(self, other):
         return self.code == other.code and self.name == other.name and self.latitude == other.latitude and self.longitude == other.longitude and self.direction == other.direction and self.lines == other.lines and self.municipality == other.municipality and self.zone == other.zone
+
+    def difference_to(self, other):
+        diff = {}
+        if self.code != other.code:
+            diff['code'] = (self.code, other.code)
+        if self.name != other.name:
+            diff['name'] = (self.name, other.name)
+        if self.latitude != other.latitude:
+            diff['latitude'] = (self.latitude, other.latitude)
+        if self.longitude != other.longitude:
+            diff['longitude'] = (self.longitude, other.longitude)
+        if self.lines != other.lines:
+            diff['lines'] = (self.lines, other.lines)
+        # Don't consider direction because it is not an original attribute
+        #if self.direction != other.direction:
+        #    diff['direction'] = (self.direction, other.direction)
+        if self.municipality != other.municipality:
+            diff['municipality'] = (self.municipality, other.municipality)
+        if self.zone != other.zone:
+            diff['zone'] = (self.zone, other.zone)
+        return diff
 
 def read_dirs(dir_file):
     dirs = {}
