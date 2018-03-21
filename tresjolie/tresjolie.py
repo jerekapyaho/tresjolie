@@ -24,6 +24,18 @@ class Stop:
         self.municipality = municipality
         self.zone = zone
 
+    @classmethod
+    def from_json(cls, json):
+        dir = None
+        if 'direction' in json:
+            dir = json['direction']
+
+        muni = ''
+        if 'municipality' in json:
+            muni = json['municipality']
+
+        return cls(json['code'], json['name'], json['latitude'], json['longitude'], dir, json['lines'], muni, json['zone']) 
+        
     def as_csv(self):
         stop_lines = ' '.join(self.lines)
         return '%d,%s,%s,%.5f,%.5f,%s,%s,%s,%s' % (int(self.code), self.code, self.name, self.latitude, self.longitude, self.direction or '', stop_lines, self.municipality, self.zone)
@@ -64,6 +76,8 @@ class Stop:
         fmt = 'Stop: code={} name="{}" latitude={} longitude={}'
         return fmt.format(self.code, self.name, self.latitude, self.longitude)
 
+    def __eq__(self, other):
+        return self.code == other.code and self.name == other.name and self.latitude == other.latitude and self.longitude == other.longitude and self.direction == other.direction and self.lines == other.lines and self.municipality == other.municipality and self.zone == other.zone
 
 def read_dirs(dir_file):
     dirs = {}
