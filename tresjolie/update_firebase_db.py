@@ -52,6 +52,14 @@ def test_equal():
     stop2 = Stop('0001', 'Keskustori M', 61.49752, 23.76151, None, ['4', '4Y'], '837', 'A')
     print(stop1 == stop2)
 
+# Transform lines from "lines":["4", "4Y"] to "lines":{"4": true, "4Y": true}
+# for Firebase
+def lines_transformed_for_firebase(stop):
+    transformed_lines = {}
+    for line in stop.lines:
+        transformed_lines[line] = True
+    return transformed_lines
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Populate an empty Firebase database from a JSON file.')
     parser.add_argument('-j', '--json', help='Name of JSON data file')
@@ -79,14 +87,15 @@ if __name__ == '__main__':
     print('Removing stops')
     for s in current_stops:
         if s.code in removed_stop_codes:
-            print('DELETE %s/stop/%s.json' % (db_url, s.code))
+            print('curl -X DELETE "%s/stop/%s.json"' % (db_url, s.code))
         else:
             stops.append(s)
 
     print('Adding stops')
     for s in fresh_stops:
         if s.code in added_stop_codes:
-            print('PUT %s/stop/%s.json' % (db_url, s.code))
+            s.lines = lines_transformed_for_firebase(s)
+            print('curl -X PUT -d "%s" "%s/stop/%s.json"' % (json.dumps(s.as_json()), db_url, s.code))
             stops.append(s)            
     
     print('Final list has %d stops' % len(stops))
@@ -111,5 +120,5 @@ if __name__ == '__main__':
     print('There are %d differing stops' % len(differing_stops))
 
     for s in differing_stops:
-        print('PATCH %s/stop/%s.json' % (db_url, s.code))
-
+        # TODO: Create proper JSON payload for patches
+        print('curl -X PATCH -d "TBD" "%s/stop/%s.json"' % (db_url, s.code))
