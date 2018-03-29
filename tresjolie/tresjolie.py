@@ -24,6 +24,24 @@ class Stop:
         self.municipality = municipality
         self.zone = zone
 
+    @classmethod
+    def from_json(cls, json):
+        dir = None
+        if 'direction' in json:
+            dir = json['direction']
+
+        muni = ''
+        if 'municipality' in json:
+            muni = json['municipality']
+
+        lines = []
+        if type(json['lines']) == dict:  # must be from Firebase
+            lines = sorted(list(json['lines'].keys()))
+        else:
+            lines = sorted(json['lines'])
+
+        return cls(json['code'], json['name'], json['latitude'], json['longitude'], dir, lines, muni, json['zone']) 
+        
     def as_csv(self):
         stop_lines = ' '.join(self.lines)
         return '%d,%s,%s,%.5f,%.5f,%s,%s,%s,%s' % (int(self.code), self.code, self.name, self.latitude, self.longitude, self.direction or '', stop_lines, self.municipality, self.zone)
@@ -64,6 +82,29 @@ class Stop:
         fmt = 'Stop: code={} name="{}" latitude={} longitude={}'
         return fmt.format(self.code, self.name, self.latitude, self.longitude)
 
+    def __eq__(self, other):
+        return self.code == other.code and self.name == other.name and self.latitude == other.latitude and self.longitude == other.longitude and self.direction == other.direction and self.lines == other.lines and self.municipality == other.municipality and self.zone == other.zone
+
+    def difference_to(self, other):
+        diff = {}
+        if self.code != other.code:
+            diff['code'] = (self.code, other.code)
+        if self.name != other.name:
+            diff['name'] = (self.name, other.name)
+        if self.latitude != other.latitude:
+            diff['latitude'] = (self.latitude, other.latitude)
+        if self.longitude != other.longitude:
+            diff['longitude'] = (self.longitude, other.longitude)
+        if self.lines != other.lines:
+            diff['lines'] = (self.lines, other.lines)
+        # Don't consider direction because it is not an original attribute
+        #if self.direction != other.direction:
+        #    diff['direction'] = (self.direction, other.direction)
+        if self.municipality != other.municipality:
+            diff['municipality'] = (self.municipality, other.municipality)
+        if self.zone != other.zone:
+            diff['zone'] = (self.zone, other.zone)
+        return diff
 
 def read_dirs(dir_file):
     dirs = {}
