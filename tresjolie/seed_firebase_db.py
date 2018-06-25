@@ -6,8 +6,8 @@ import requests
 import logging
 import argparse
 import json
-import geohash
 
+import geohash  # See https://github.com/vinsci/geohash/issues/4
 import google
 from google.oauth2 import service_account
 from google.auth.transport.requests import AuthorizedSession
@@ -23,7 +23,7 @@ def read_json_data(json_filename):
         json_data = json.load(json_file)
     return json_data    
 
-db_url = os.environ['FIREBASE_DB_URL']
+db_url = 'dbname.firebaseio.com'  # 'dbname' filled in from command-line argument
 access_token = ''
 
 # Direct logs to standard output too
@@ -76,6 +76,7 @@ def put_stops_locations(stops_data):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Populate an empty Firebase database from a JSON file.')
+    parser.add_argument('-d', '--database', help='Name of Firebase database')
     parser.add_argument('-j', '--json', help='Name of JSON data file')
     parser.add_argument('-k', '--keys', help='Firebase service account key file')
     args = parser.parse_args()
@@ -86,6 +87,8 @@ if __name__ == '__main__':
     credentials.refresh(request)
     access_token = credentials.token
 
+    db_url = 'https://{db_name}.firebaseio.com'.format(db_name=args.database)
+
     data = read_json_data(args.json)
     print(len(data['stops']))
     put_stops(data['stops'])
@@ -94,4 +97,3 @@ if __name__ == '__main__':
     put_lines(data['lines'])
 
     put_stops_locations(data['stops'])
-
