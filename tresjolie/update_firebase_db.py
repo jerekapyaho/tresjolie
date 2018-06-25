@@ -15,7 +15,7 @@ def read_json_data(json_filename):
         json_data = json.load(json_file)
     return json_data    
 
-db_url = os.environ['FIREBASE_DB_URL']
+db_url = 'dbname.firebaseio.com'  # 'dbname' filled in from command-line argument
 
 # Direct logs to standard output too
 root_logger = logging.getLogger()
@@ -61,9 +61,12 @@ def lines_transformed_for_firebase(stop):
     return transformed_lines
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Populate an empty Firebase database from a JSON file.')
+    parser = argparse.ArgumentParser(description='Updates the Firebase database from a JSON file.')
+    parser.add_argument('-d', '--database', help='Name of Firebase database')
     parser.add_argument('-j', '--json', help='Name of JSON data file')
     args = parser.parse_args()
+
+    db_url = 'https://{db_name}.firebaseio.com'.format(db_name=args.database)
 
     current_stops = get_current_stops()
     print('Got %d stops from Firebase' % len(current_stops))
@@ -95,7 +98,7 @@ if __name__ == '__main__':
     for s in fresh_stops:
         if s.code in added_stop_codes:
             s.lines = lines_transformed_for_firebase(s)
-            print('curl -X PUT -d "%s" "%s/stop/%s.json"' % (json.dumps(s.as_json()), db_url, s.code))
+            print("curl -X PUT -d '%s' %s/stop/%s.json" % (json.dumps(s.as_json()), db_url, s.code))
             stops.append(s)            
     
     print('Final list has %d stops' % len(stops))
@@ -121,4 +124,4 @@ if __name__ == '__main__':
 
     for s in differing_stops:
         # TODO: Create proper JSON payload for patches
-        print('curl -X PATCH -d "TBD" "%s/stop/%s.json"' % (db_url, s.code))
+        print('curl -X PATCH -d "TBD" %s/stop/%s.json' % (db_url, s.code))
