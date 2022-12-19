@@ -25,10 +25,9 @@ using `python3 -m venv venv`.
 * Activate the virtual environment with `source venv/bin/activate`.
 You should see the command prompt change to indicate an active
 virtual environment.
-* Install the required dependencies. For example, to install Requests,
-type `pip3 install requests`.
+* Install the required dependencies with `pip3 install requests tqdm`.
 
-Type `cd tresjolie; python3 tresjolie.py` to show usage information.
+Type `cd tresjolie; python3 tresjolie.py -h` to show usage information.
 
 When you're done, deactivate the virtual environment with `deactivate`.
 

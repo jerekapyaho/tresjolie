@@ -9,6 +9,9 @@ import requests
 import logging
 from tqdm import tqdm
 
+import geodesy
+
+
 def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
     return [int(text) if text.isdigit() else text.lower()
             for text in re.split(_nsre, s)]
@@ -23,24 +26,6 @@ class Stop:
         self.lines = lines
         self.municipality = municipality
         self.zone = zone
-
-    @classmethod
-    def from_json(cls, json):
-        dir = None
-        if 'direction' in json:
-            dir = json['direction']
-
-        muni = ''
-        if 'municipality' in json:
-            muni = json['municipality']
-
-        lines = []
-        if type(json['lines']) == dict:  # must be from Firebase
-            lines = sorted(list(json['lines'].keys()))
-        else:
-            lines = sorted(json['lines'])
-
-        return cls(json['code'], json['name'], json['latitude'], json['longitude'], dir, lines, muni, json['zone']) 
         
     def as_csv(self):
         stop_lines = ' '.join(self.lines)
@@ -56,55 +41,17 @@ class Stop:
                  'zone': self.zone}
                  
         # Omit the direction value if it is not set
-        if self.direction != None:
+        if self.direction is not None:
             result['direction'] = self.direction
         
         return result    
 
-    def as_java(self):
-        stop_lines = ' '.join(self.lines)
-        src_template = 'stops.add(new Stop(%d, "%s", "%s", %s, %s, "%s", "%s", "%s", "%s"));'
-        return src_template % (int(self.code), self.code, self.name, self.latitude, self.longitude, self.direction or '', stop_lines, self.municipality, self.zone) 
-                            
-    def as_source(self, src):
-        result = None
-    
-        if src == 'csv':
-            result = self.as_csv()
-        elif src == 'json':
-            result = self.as_json()
-        elif src == 'java':
-            result = self.as_java()
-        
-        return result
-        
     def __repr__(self):
         fmt = 'Stop: code={} name="{}" latitude={} longitude={}'
         return fmt.format(self.code, self.name, self.latitude, self.longitude)
 
     def __eq__(self, other):
         return self.code == other.code and self.name == other.name and self.latitude == other.latitude and self.longitude == other.longitude and self.direction == other.direction and self.lines == other.lines and self.municipality == other.municipality and self.zone == other.zone
-
-    def difference_to(self, other):
-        diff = {}
-        if self.code != other.code:
-            diff['code'] = (self.code, other.code)
-        if self.name != other.name:
-            diff['name'] = (self.name, other.name)
-        if self.latitude != other.latitude:
-            diff['latitude'] = (self.latitude, other.latitude)
-        if self.longitude != other.longitude:
-            diff['longitude'] = (self.longitude, other.longitude)
-        if self.lines != other.lines:
-            diff['lines'] = (self.lines, other.lines)
-        # Don't consider direction because it is not an original attribute
-        #if self.direction != other.direction:
-        #    diff['direction'] = (self.direction, other.direction)
-        if self.municipality != other.municipality:
-            diff['municipality'] = (self.municipality, other.municipality)
-        if self.zone != other.zone:
-            diff['zone'] = (self.zone, other.zone)
-        return diff
 
 def read_dirs(dir_file):
     dirs = {}
@@ -121,15 +68,14 @@ def read_dirs(dir_file):
     
 
 # Use the Journeys API to get stop points.
-# See http://wiki.itsfactory.fi/index.php/Journeys_API
+# See https://wiki.itsfactory.fi/index.php/Journeys_API
 JOURNEYS_API = 'http://data.itsfactory.fi/journeys/api/1/'
 ENDPOINT_STOP_POINTS = 'stop-points'  # returns all stop points
-ENDPOINT_JOURNEYS = 'journeys'
 ENDPOINT_LINES = 'lines'
 
 def lines_for_stop(stop_code):
     url = JOURNEYS_API + ENDPOINT_LINES
-    #print('Loading lines for stop %s from Journeys API, url = "%s"' % (stop_code, url))
+    logging.info('Loading lines for stop %s from Journeys API, url = "%s"' % (stop_code, url))
     params = {'stopPointId': stop_code}
     r = requests.get(url, params=params)
     json_data = r.json()
@@ -151,7 +97,7 @@ def collect(data_path, dir_file):
         logging.info('No directions file found')
     
     url = JOURNEYS_API + ENDPOINT_LINES
-    #print('Loading lines from Journeys API, url = "%s"' % url)
+    logging.info('Loading lines from Journeys API, url = "%s"' % url)
     r = requests.get(url)
     json_data = r.json()
     lines = json_data['body']
@@ -160,7 +106,7 @@ def collect(data_path, dir_file):
     all_lines = [{'name': line['name'], 'description': line['description']} for line in lines]
     
     url = JOURNEYS_API + ENDPOINT_STOP_POINTS
-    #print('Loading stop points from Journeys API, url = "%s"' % url)
+    logging.info('Loading stop points from Journeys API, url = "%s"' % url)
     r = requests.get(url)
     json_data = r.json()
     
@@ -199,7 +145,7 @@ def collect(data_path, dir_file):
             
 def locate(latitude, longitude, distance):
     # Get a bounding box around the location
-    sw_corner, ne_corner = geodesy.bounding_box(lat, lon, distance)
+    sw_corner, ne_corner = geodesy.bounding_box(latitude, longitude, distance)
     location_param = 'location=%.5f,%.5f:%.5f,%.5f' % (sw_corner[0], sw_corner[1], ne_corner[0], ne_corner[1])
 
     url = JOURNEYS_API + ENDPOINT_STOP_POINTS
