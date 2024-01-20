@@ -1,6 +1,5 @@
 import csv
 import sys
-import codecs
 import json
 import argparse
 import re
@@ -26,25 +25,25 @@ class Stop:
         self.lines = lines
         self.municipality = municipality
         self.zone = zone
-        
+
     def as_csv(self):
         stop_lines = ' '.join(self.lines)
         return '%d,%s,%s,%.5f,%.5f,%s,%s,%s,%s' % (int(self.code), self.code, self.name, self.latitude, self.longitude, self.direction or '', stop_lines, self.municipality, self.zone)
 
     def as_json(self):
-        result = {'code': self.code, 
-                 'name': self.name, 
-                 'latitude': self.latitude, 
+        result = {'code': self.code,
+                 'name': self.name,
+                 'latitude': self.latitude,
                  'longitude': self.longitude,
                  'lines': self.lines,
                  'municipality': self.municipality,
                  'zone': self.zone}
-                 
+
         # Omit the direction value if it is not set
         if self.direction is not None:
             result['direction'] = self.direction
-        
-        return result    
+
+        return result
 
     def __repr__(self):
         fmt = 'Stop: code={} name="{}" latitude={} longitude={}'
@@ -64,8 +63,8 @@ def read_dirs(dir_file):
             row_num += 1
     finally:
         f.close()
-    return dirs    
-    
+    return dirs
+
 
 # Use the Journeys API to get stop points.
 # See https://wiki.itsfactory.fi/index.php/Journeys_API
@@ -95,21 +94,21 @@ def collect(data_path, dir_file):
         logging.info('Read %d stop directions from CSV file "%s".' % (len(directions), dir_filename))
     else:
         logging.info('No directions file found')
-    
+
     url = JOURNEYS_API + ENDPOINT_LINES
     logging.info('Loading lines from Journeys API, url = "%s"' % url)
     r = requests.get(url)
     json_data = r.json()
     lines = json_data['body']
     logging.info('Read %d lines from Journeys API.' % len(lines))
-        
+
     all_lines = [{'name': line['name'], 'description': line['description']} for line in lines]
-    
+
     url = JOURNEYS_API + ENDPOINT_STOP_POINTS
     logging.info('Loading stop points from Journeys API, url = "%s"' % url)
     r = requests.get(url)
     json_data = r.json()
-    
+
     # The JSON returned from Journeys API is JSend-compatible.
     # See http://labs.omniti.com/labs/jsend for details.
     stops = json_data['body']
@@ -125,16 +124,16 @@ def collect(data_path, dir_file):
         if 'municipality' in s:
             stop.municipality = s['municipality']['shortName']
         stop.zone = s['tariffZone']
-        
+
         stop_lines = lines_for_stop(stop.code)
-        
+
         line_names = [line['name'] for line in stop_lines]
         stop.lines = sorted(line_names, key=natural_sort_key)
-        
+
         stop.direction = None
         if stop.code in directions:
             stop.direction = directions[stop.code]
-        
+
         all_stops.append(stop)
 
     data = {'stops': [], 'lines': all_lines}
@@ -142,7 +141,7 @@ def collect(data_path, dir_file):
         data['stops'].append(stop.as_json())
     return data
 
-            
+
 def locate(latitude, longitude, distance):
     # Get a bounding box around the location
     sw_corner, ne_corner = geodesy.bounding_box(latitude, longitude, distance)
@@ -152,7 +151,7 @@ def locate(latitude, longitude, distance):
     params = {'location': location_param}
     r = requests.get(url, params=params)
     logging.info('Loading stop points from %s' % url)
-    
+
     json_data = r.json()
     return json_data['body']
 
@@ -172,7 +171,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--dirfile', help='Filename of directions CSV file', default='stop_directions.csv')
     parser.add_argument('-p', '--path', help='Path of related data files', default='.')
     parser.add_argument('-a', '--latitude', help='Latitude of current location in decimal degrees', type=float)
-    parser.add_argument('-o', '--longitude', help='Longitude of current location in decimal degrees', type=float)    
+    parser.add_argument('-o', '--longitude', help='Longitude of current location in decimal degrees', type=float)
     args = parser.parse_args()
 
     if args.action == 'collect':
@@ -181,7 +180,7 @@ if __name__ == '__main__':
     elif args.action == 'locate':
         nearest_stops = locate(args.latitude, args.longitude, args.distance)
         for stop in nearest_stops:
-            print('%s %s' % (stop['shortName'], stop['name']))        
+            print('%s %s' % (stop['shortName'], stop['name']))
     else:
         print('Unknown action:', args.action)
         parser.print_help()

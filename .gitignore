@@ -10,3 +10,7 @@ venv/
 # Visual Studio Code
 .vscode/
 */.vscode/
+
+# Any transient data files
+*.json
+*.csv

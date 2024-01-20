@@ -42,6 +42,6 @@ It's a pun, of course:
 
 ## License
 
-Copyright © 2014-2021 Conifer Productions Oy
+Copyright © 2014-2024 Conifer Productions Oy
 
 Distributed under the MIT License.
