@@ -68,15 +68,23 @@ def read_dirs(dir_file):
 
 # Use the Journeys API to get stop points.
 # See https://wiki.itsfactory.fi/index.php/Journeys_API
-JOURNEYS_API = 'http://data.itsfactory.fi/journeys/api/1/'
+JOURNEYS_API = 'https://data.itsfactory.fi/journeys/api/1/'
 ENDPOINT_STOP_POINTS = 'stop-points'  # returns all stop points
 ENDPOINT_LINES = 'lines'
+
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Accept-Encoding': 'gzip, deflate',
+    'Connection': 'keep-alive',
+}
 
 def lines_for_stop(stop_code):
     url = JOURNEYS_API + ENDPOINT_LINES
     logging.info('Loading lines for stop %s from Journeys API, url = "%s"' % (stop_code, url))
     params = {'stopPointId': stop_code}
-    r = requests.get(url, params=params)
+    r = requests.get(url, params=params, headers=HEADERS)
     json_data = r.json()
     lines = json_data['body']
     logging.info('stop %s - %d lines' % (stop_code, len(lines)))
@@ -97,7 +105,7 @@ def collect(data_path, dir_file):
 
     url = JOURNEYS_API + ENDPOINT_LINES
     logging.info('Loading lines from Journeys API, url = "%s"' % url)
-    r = requests.get(url)
+    r = requests.get(url, headers=HEADERS)
     json_data = r.json()
     lines = json_data['body']
     logging.info('Read %d lines from Journeys API.' % len(lines))
@@ -106,7 +114,7 @@ def collect(data_path, dir_file):
 
     url = JOURNEYS_API + ENDPOINT_STOP_POINTS
     logging.info('Loading stop points from Journeys API, url = "%s"' % url)
-    r = requests.get(url)
+    r = requests.get(url, headers=HEADERS)
     json_data = r.json()
 
     # The JSON returned from Journeys API is JSend-compatible.
@@ -162,7 +170,7 @@ log_handler = logging.StreamHandler(sys.stdout)
 log_handler.setLevel(logging.INFO)
 log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log_handler.setFormatter(log_formatter)
-#root_logger.addHandler(log_handler)
+root_logger.addHandler(log_handler)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Load stop points and lines from Journeys API and generate JSON, or report stops within a given distance from the specified location.')
