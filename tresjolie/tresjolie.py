@@ -5,10 +5,9 @@ import argparse
 import re
 import os
 import requests
-import logging
-from tqdm import tqdm
+#from tqdm import tqdm
 
-import geodesy
+#import geodesy
 
 
 def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
@@ -82,49 +81,48 @@ HEADERS = {
 
 def lines_for_stop(stop_code):
     url = JOURNEYS_API + ENDPOINT_LINES
-    logging.info('Loading lines for stop %s from Journeys API, url = "%s"' % (stop_code, url))
     params = {'stopPointId': stop_code}
     r = requests.get(url, params=params, headers=HEADERS)
+    print(f'Loaded lines for stop {stop_code} from Journeys API, url = "{url}"')
     json_data = r.json()
     lines = json_data['body']
-    logging.info('stop %s - %d lines' % (stop_code, len(lines)))
+    print(f'stop {stop_code} - {len(lines)}')
     stop_lines = []
     for line in lines:
         stop_lines.append({'name': line['name'], 'description': line['description']})
     return stop_lines
-
 
 def collect(data_path, dir_file):
     dir_filename = os.path.join(data_path, dir_file)
     directions = {}
     if os.path.exists(dir_filename):
         directions = read_dirs(dir_filename)
-        logging.info('Read %d stop directions from CSV file "%s".' % (len(directions), dir_filename))
+        print(f'Read {len(directions)} stop directions from CSV file "{dir_filename}".')
     else:
-        logging.info('No directions file found')
+        print('No directions file found')
 
     url = JOURNEYS_API + ENDPOINT_LINES
-    logging.info('Loading lines from Journeys API, url = "%s"' % url)
+    print(f'Loading lines from Journeys API, url = "{url}"')
     r = requests.get(url, headers=HEADERS)
     json_data = r.json()
     lines = json_data['body']
-    logging.info('Read %d lines from Journeys API.' % len(lines))
+    print(f'Read {len(lines)} lines from Journeys API.')
 
     all_lines = [{'name': line['name'], 'description': line['description']} for line in lines]
 
     url = JOURNEYS_API + ENDPOINT_STOP_POINTS
-    logging.info('Loading stop points from Journeys API, url = "%s"' % url)
+    print(f'Loading stop points from Journeys API, url = "{url}"')
     r = requests.get(url, headers=HEADERS)
     json_data = r.json()
 
     # The JSON returned from Journeys API is JSend-compatible.
     # See http://labs.omniti.com/labs/jsend for details.
     stops = json_data['body']
-    logging.info('Loaded %d stop points from Journeys API.' % len(stops))
+    print(f'Loaded {len(stops)} stop points from Journeys API.')
 
     all_stops = []
 
-    for s in tqdm(stops):
+    for s in stops:
         coords = s['location'].split(',')
         stop = Stop(s['shortName'], s['name'], float(coords[0]), float(coords[1]))
 
@@ -149,46 +147,13 @@ def collect(data_path, dir_file):
         data['stops'].append(stop.as_json())
     return data
 
-
-def locate(latitude, longitude, distance):
-    # Get a bounding box around the location
-    sw_corner, ne_corner = geodesy.bounding_box(latitude, longitude, distance)
-    location_param = 'location=%.5f,%.5f:%.5f,%.5f' % (sw_corner[0], sw_corner[1], ne_corner[0], ne_corner[1])
-
-    url = JOURNEYS_API + ENDPOINT_STOP_POINTS
-    params = {'location': location_param}
-    r = requests.get(url, params=params)
-    logging.info('Loading stop points from %s' % url)
-
-    json_data = r.json()
-    return json_data['body']
-
-# Direct logs to standard output too
-root_logger = logging.getLogger()
-#root_logger.setLevel(logging.DEBUG)
-log_handler = logging.StreamHandler(sys.stdout)
-log_handler.setLevel(logging.INFO)
-log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-log_handler.setFormatter(log_formatter)
-root_logger.addHandler(log_handler)
-
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Load stop points and lines from Journeys API and generate JSON, or report stops within a given distance from the specified location.')
-    parser.add_argument('action', help='What to do; one of collect | locate')
-    parser.add_argument('-d', '--distance', type=float, help='Distance from current location in kilometers', default=0.5)
+    parser = argparse.ArgumentParser(description='Load stop points and lines from Journeys API and generate JSON')
     parser.add_argument('-i', '--dirfile', help='Filename of directions CSV file', default='stop_directions.csv')
     parser.add_argument('-p', '--path', help='Path of related data files', default='.')
-    parser.add_argument('-a', '--latitude', help='Latitude of current location in decimal degrees', type=float)
-    parser.add_argument('-o', '--longitude', help='Longitude of current location in decimal degrees', type=float)
+    parser.add_argument('-o', '--output', help='Name of output file')
     args = parser.parse_args()
 
-    if args.action == 'collect':
-        data = collect(args.path, args.dirfile)
-        print(json.dumps(data))
-    elif args.action == 'locate':
-        nearest_stops = locate(args.latitude, args.longitude, args.distance)
-        for stop in nearest_stops:
-            print('%s %s' % (stop['shortName'], stop['name']))
-    else:
-        print('Unknown action:', args.action)
-        parser.print_help()
+    data = collect(args.path, args.dirfile)
+    with open(args.output, 'w') as out_file:
+        json.dump(data, out_file)
